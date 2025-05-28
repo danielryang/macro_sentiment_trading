@@ -1,77 +1,143 @@
-# Macro Sentiment Trading
+# Macro Sentiment Trading Pipeline
 
-## Research Motivation
-Extracting macro‐alpha from global news sentiment is a frontier in systematic trading. This project implements an interpretable machine learning framework to link macro news sentiment to asset returns, inspired by [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1).
+This project implements an end-to-end pipeline for trading macro assets based on news sentiment analysis. The pipeline combines news data from GDELT, sentiment analysis using FinBERT, and machine learning models to generate trading signals.
 
-## Project Overview
-- **Goal:** Build an interpretable ML framework to extract macro‐alpha from global news sentiment.
-- **Data sources:**
-  - GDELT v2 API (no key required) for worldwide macro headlines (EventCodes 100–199)
-  - Yahoo Finance (tickers: `EURUSD=X`, `USDJPY=X`, `ZN=F`)
-- **NLP model:** FinBERT (`ProsusAI/finbert` via HuggingFace Transformers; requires `HUGGINGFACE_TOKEN` env var if rate‐limited)
-- **Features:** Daily mean sentiment, sentiment dispersion, news volume, article impact, Goldstein scores; plus lags, moving averages (5/20 days), rolling std, sentiment acceleration
-- **Predictive models:** Logistic Regression (with standard scaling) and XGBoost (tree‐based, non‐linear), tuned via time‐series cross‐validation
-- **Backtest:** 5‐fold expanding window (train starts Jan 2015), realistic transaction costs (0.02% FX, 0.05% bonds), output Sharpe, CAGR, max drawdown
-- **Interpretability:** SHAP to explain XGBoost feature contributions
+## Pipeline Overview
+
+1. **News Collection and Filtering**
+   - Sources daily event records from GDELT v2 API
+   - Filters for macro-relevant events (EventCode 100-199)
+   - Retains top 100 events per day by article coverage
+
+2. **Headline Extraction**
+   - Extracts headlines from article URLs
+   - Cleans and normalizes text
+   - Truncates to 512 WordPiece tokens
+
+3. **Sentiment Scoring**
+   - Uses FinBERT model for sentiment analysis
+   - Computes polarity scores (-1 to +1)
+   - Generates daily sentiment features
+
+4. **Market Data Processing**
+   - Downloads price data for EUR/USD, USD/JPY, and Treasury futures
+   - Computes returns and technical features
+   - Aligns market data with sentiment features
+
+5. **Predictive Modeling**
+   - Implements both logistic regression and XGBoost models
+   - Uses expanding window backtest approach
+   - Includes transaction costs in performance calculation
+
+6. **Model Interpretation**
+   - Computes SHAP values for feature importance
+   - Generates performance metrics and visualizations
 
 ## Project Structure
+
 ```
-macro_sentiment_trading/
-├── data/
-│   ├── raw/        # GDELT CSVs, raw market data, raw headlines
-│   └── processed/  # cleaned sentiment & feature tables
-├── notebooks/      # EDA and prototyping
+.
 ├── src/
-│   ├── __init__.py
-│   ├── ingestion.py    # download & filter GDELT events and market data
-│   ├── headlines.py    # scrape & extract article headlines
-│   ├── sentiment.py    # FinBERT sentiment scoring pipeline
-│   ├── features.py     # compute daily aggregates, lags, MAs, rolling stats
-│   ├── model.py        # train and tune logistic regression & XGBoost
-│   ├── backtest.py     # expanding-window out-of-sample backtest, P&L simulation
-│   └── utils.py        # configuration loader, logging, date helpers
-├── requirements.txt    # Python dependencies
-├── .env.example        # template for environment variables
-├── Dockerfile          # containerization (optional)
-└── README.md           # overview, research context, setup, usage
+│   ├── news_collector.py      # GDELT data collection
+│   ├── headline_processor.py  # Headline extraction and cleaning
+│   ├── sentiment_analyzer.py  # FinBERT sentiment analysis
+│   ├── market_processor.py    # Market data processing
+│   ├── model_trainer.py       # Model training and backtesting
+│   └── main.py               # Pipeline orchestration
+├── data/                     # Data storage
+├── results/                  # Backtest results and metrics
+├── notebooks/               # Jupyter notebooks for analysis
+├── requirements.txt         # Project dependencies
+└── README.md               # Project documentation
 ```
 
-## Setup Instructions
-1. **Clone the repository**
-2. **Create a virtual environment**
-   ```sh
-   python -m venv .venv
-   ```
-3. **Install dependencies**
-   ```sh
-   pip install -r requirements.txt
-   ```
-4. **Create your `.env` file** (see `.env.example` for required variables)
+## Installation
 
-## Environment Variables (`.env`)
-- `GDELT_API_URL` (default v2 events endpoint)
-- `DATABASE_URL` (e.g. `postgresql://user:pass@localhost:5432/macro_sentiment`)
-- `HUGGINGFACE_TOKEN` (if needed for FinBERT)
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/macro_sentiment_trading.git
+cd macro_sentiment_trading
+```
+
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
-Fetch and process data, run models, and backtest:
-```sh
-python src/ingestion.py   # Download & filter GDELT and market data
-python src/headlines.py  # Scrape & extract article headlines
-python src/sentiment.py  # Run FinBERT sentiment scoring
-python src/features.py   # Compute features
-python src/model.py      # Train and tune models
-python src/backtest.py   # Run backtest and P&L simulation
+
+Run the complete pipeline:
+```bash
+python src/main.py
 ```
 
-## SHAP Interpretability
-- SHAP plots are generated in `model.py` and/or `backtest.py`.
-- Use these to interpret XGBoost feature contributions and model decisions.
+The pipeline will:
+1. Collect news data from GDELT
+2. Process headlines and compute sentiment scores
+3. Download and process market data
+4. Train models and run backtests
+5. Generate performance metrics and SHAP values
+6. Save results to the `results/` directory
+
+## Results
+
+The pipeline generates several output files:
+- `results/{asset}_{model}_results.csv`: Backtest results for each asset and model
+- `results/{asset}_shap_values.csv`: SHAP values for feature importance
+- `results/performance_metrics.csv`: Summary performance metrics
+
+## Dependencies
+
+- Python 3.8+
+- See `requirements.txt` for full list of dependencies
 
 ## Extending the Framework
-- Add new assets by updating tickers and data ingestion logic.
-- Adapt to intraday feeds by modifying feature engineering and backtest frequency.
-- Integrate with a scheduler (e.g., Airflow) for daily ingestion and retraining.
 
----
-**Reference:** [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1)
+The pipeline is designed to be modular and extensible. Here are some ways to extend it:
+
+1. **Add New Assets**
+   - Add new tickers to the `assets` dictionary in `MarketProcessor`
+   - Adjust transaction costs in `main.py` if needed
+   - The pipeline will automatically handle the new assets
+
+2. **Customize Feature Engineering**
+   - Add new market features in `MarketProcessor.compute_market_features()`
+   - Add new sentiment features in `SentimentAnalyzer.compute_daily_features()`
+   - The feature alignment process will automatically include new features
+
+3. **Add New Models**
+   - Add new model classes to `ModelTrainer.models`
+   - Implement required methods (fit, predict_proba)
+   - The backtesting framework will automatically include new models
+
+4. **Modify Backtest Parameters**
+   - Adjust fold duration in `ModelTrainer.backtest()`
+   - Change transaction costs in `main.py`
+   - Modify performance metrics in `ModelTrainer.compute_metrics()`
+
+5. **Integrate with Production Systems**
+   - Add database integration for storing results
+   - Implement real-time data feeds
+   - Add API endpoints for model predictions
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- GDELT Project for providing the news data API
+- ProsusAI for developing and open-sourcing the FinBERT model
+- HuggingFace for maintaining the transformers library
+- Yahoo Finance for market data access
+- The open-source community for the various Python packages used in this project
+
+## Reference
+
+This implementation is based on the research paper: [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1)
