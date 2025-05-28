@@ -1,0 +1,13 @@
+pandas
+numpy
+requests
+beautifulsoup4
+transformers
+torch
+xgboost
+scikit-learn
+yfinance
+shap
+python-dotenv
+sqlalchemy
+psycopg2-binary
