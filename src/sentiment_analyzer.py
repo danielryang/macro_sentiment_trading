@@ -106,6 +106,7 @@ class SentimentAnalyzer:
         daily_features = []
         
         for date, group in sentiment_df.groupby('date'):
+            # Basic sentiment statistics
             features = {
                 'date': date,
                 'mean_sentiment': group['polarity'].mean(),
@@ -115,11 +116,37 @@ class SentimentAnalyzer:
                 'article_impact': group['polarity'].mean() * np.log(1 + len(group))
             }
             
+            # Sentiment distribution features
+            features.update({
+                'sentiment_skew': group['polarity'].skew(),
+                'sentiment_kurtosis': group['polarity'].kurtosis(),
+                'sentiment_range': group['polarity'].max() - group['polarity'].min(),
+                'sentiment_iqr': group['polarity'].quantile(0.75) - group['polarity'].quantile(0.25)
+            })
+            
+            # Sentiment concentration metrics
+            positive_mask = group['polarity'] > 0
+            negative_mask = group['polarity'] < 0
+            features.update({
+                'positive_ratio': positive_mask.mean(),
+                'negative_ratio': negative_mask.mean(),
+                'neutral_ratio': (group['polarity'] == 0).mean(),
+                'sentiment_consensus': 1 - features['sentiment_std']  # Higher when sentiment is more uniform
+            })
+            
+            # Volume-weighted sentiment
+            features.update({
+                'vw_sentiment': (group['polarity'] * np.log(1 + group['p_positive'] + group['p_negative'])).mean(),
+                'sentiment_volume_ratio': features['mean_sentiment'] * features['log_volume']
+            })
+            
             # Add Goldstein features if available
             if 'goldstein' in group.columns:
                 features.update({
                     'goldstein_mean': group['goldstein'].mean(),
-                    'goldstein_std': group['goldstein'].std()
+                    'goldstein_std': group['goldstein'].std(),
+                    'goldstein_impact': group['goldstein'].mean() * features['log_volume'],
+                    'sentiment_goldstein_corr': group['polarity'].corr(group['goldstein'])
                 })
                 
             daily_features.append(features)
