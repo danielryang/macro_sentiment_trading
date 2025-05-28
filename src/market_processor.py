@@ -45,84 +45,36 @@ class MarketProcessor:
         
     def fetch_market_data(self, start_date: str, end_date: str) -> Dict[str, pd.DataFrame]:
         """
-        Fetch market data for specified assets.
-        
-        Args:
-            start_date: Start date in YYYY-MM-DD format
-            end_date: End date in YYYY-MM-DD format
-            
-        Returns:
-            Dictionary of DataFrames with market data for each asset
+        Fetch market data for specified assets, strictly following research math.
+        Returns DataFrames with log returns, next-day target, and 20-day volatility.
         """
         market_data = {}
-        
         for asset_name, ticker in self.assets.items():
             try:
                 data = yf.download(ticker, start=start_date, end=end_date)
+                # Log returns
                 data['returns'] = np.log(data['Close'] / data['Close'].shift(1))
-                data['target'] = (data['returns'].shift(-1) > 0).astype(int)
+                # Next-day target: 1 if next day's return > 0, else 0
+                data['target'] = (data['Close'].shift(-1) > data['Close']).astype(int)
+                # 20-day rolling volatility (std of log returns)
+                data['vol20'] = data['returns'].rolling(20).std()
                 market_data[asset_name] = data
-                logger.info(f"Successfully downloaded data for {asset_name}")
+                logger.info(f"Successfully downloaded and processed data for {asset_name}")
             except Exception as e:
                 logger.error(f"Error downloading data for {asset_name}: {str(e)}")
-                
         return market_data
         
     def compute_market_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """
-        Compute market features for a single asset.
-        
-        Args:
-            data: DataFrame with market data
-            
-        Returns:
-            DataFrame with added features
+        Compute additional market features strictly as described in the research.
+        Includes lagged returns and volatility, and ensures no look-ahead bias.
         """
         df = data.copy()
-        
-        # Returns and momentum features
-        for lag in [1, 2, 3, 5, 10, 20]:
-            df[f'return_lag_{lag}'] = df['returns'].shift(lag)
-            df[f'return_ma_{lag}'] = df['returns'].rolling(lag).mean()
-            df[f'return_std_{lag}'] = df['returns'].rolling(lag).std()
-            
-        # Volatility features
-        df['volatility_20d'] = df['returns'].rolling(20).std()
-        df['volatility_ratio'] = df['volatility_20d'] / df['volatility_20d'].rolling(60).mean()
-        df['volatility_change'] = df['volatility_20d'].pct_change()
-        
-        # Price levels and moving averages
-        for window in [5, 10, 20, 50, 100]:
-            df[f'ma_{window}d'] = df['Close'].rolling(window).mean()
-            df[f'ma_ratio_{window}d'] = df['Close'] / df[f'ma_{window}d']
-            df[f'ma_diff_{window}d'] = df[f'ma_{window}d'].diff()
-            
-        # Price momentum and trend features
-        for window in [5, 10, 20, 50]:
-            df[f'momentum_{window}d'] = df['Close'] / df['Close'].shift(window) - 1
-            df[f'roc_{window}d'] = df['Close'].pct_change(window)
-            df[f'trend_{window}d'] = (df['Close'] > df[f'ma_{window}d']).astype(int)
-            
-        # Range and volatility features
-        df['daily_range'] = (df['High'] - df['Low']) / df['Close']
-        df['range_ma_5d'] = df['daily_range'].rolling(5).mean()
-        df['range_ratio'] = df['daily_range'] / df['range_ma_5d']
-        
-        # Volume features
-        if 'Volume' in df.columns:
-            df['volume_ma_5d'] = df['Volume'].rolling(5).mean()
-            df['volume_ratio'] = df['Volume'] / df['volume_ma_5d']
-            df['volume_trend'] = df['Volume'].rolling(20).mean().pct_change()
-            
-        # Mean reversion features
-        df['zscore_20d'] = (df['Close'] - df['ma_20d']) / df['Close'].rolling(20).std()
-        df['zscore_50d'] = (df['Close'] - df['ma_50d']) / df['Close'].rolling(50).std()
-        
-        # Trend strength indicators
-        df['adx_14d'] = self.compute_adx(df, 14)
-        df['trend_strength'] = abs(df['ma_5d'] - df['ma_20d']) / df['Close']
-        
-        return df
+        # Lagged returns (1 day)
+        df['return_lag_1'] = df['returns'].shift(1)
+        # 20-day rolling volatility (already computed as vol20)
+        # All features use only info up to and including day t
+        return df.dropna().reset_index()
         
     def compute_adx(self, data: pd.DataFrame, period: int) -> pd.Series:
         """
@@ -206,7 +158,7 @@ class MarketProcessor:
             merged['sentiment_momentum'] = merged['mean_sentiment'].diff(5)
             
             # Create interaction features
-            merged['sentiment_volatility'] = merged['mean_sentiment'] * merged['volatility_20d']
+            merged['sentiment_volatility'] = merged['mean_sentiment'] * merged['vol20']
             merged['sentiment_trend'] = merged['mean_sentiment'] * merged['trend_strength']
             
             # Drop rows with NaN values
