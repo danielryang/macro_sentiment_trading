@@ -95,60 +95,59 @@ class SentimentAnalyzer:
         
     def compute_daily_features(self, sentiment_df: pd.DataFrame) -> pd.DataFrame:
         """
-        Compute daily sentiment features.
-        
+        Compute daily sentiment features strictly following the research math.
         Args:
-            sentiment_df: DataFrame with sentiment scores
-            
+            sentiment_df: DataFrame with columns ['date', 'polarity', 'goldstein']
         Returns:
-            DataFrame with daily features
+            DataFrame with daily features and all required lags, MAs, rolling stds, and sums.
         """
-        daily_features = []
-        
-        for date, group in sentiment_df.groupby('date'):
-            # Basic sentiment statistics
-            features = {
-                'date': date,
-                'mean_sentiment': group['polarity'].mean(),
-                'sentiment_std': group['polarity'].std(),
-                'news_volume': len(group),
-                'log_volume': np.log(1 + len(group)),
-                'article_impact': group['polarity'].mean() * np.log(1 + len(group))
-            }
-            
-            # Sentiment distribution features
-            features.update({
-                'sentiment_skew': group['polarity'].skew(),
-                'sentiment_kurtosis': group['polarity'].kurtosis(),
-                'sentiment_range': group['polarity'].max() - group['polarity'].min(),
-                'sentiment_iqr': group['polarity'].quantile(0.75) - group['polarity'].quantile(0.25)
-            })
-            
-            # Sentiment concentration metrics
-            positive_mask = group['polarity'] > 0
-            negative_mask = group['polarity'] < 0
-            features.update({
-                'positive_ratio': positive_mask.mean(),
-                'negative_ratio': negative_mask.mean(),
-                'neutral_ratio': (group['polarity'] == 0).mean(),
-                'sentiment_consensus': 1 - features['sentiment_std']  # Higher when sentiment is more uniform
-            })
-            
-            # Volume-weighted sentiment
-            features.update({
-                'vw_sentiment': (group['polarity'] * np.log(1 + group['p_positive'] + group['p_negative'])).mean(),
-                'sentiment_volume_ratio': features['mean_sentiment'] * features['log_volume']
-            })
-            
-            # Add Goldstein features if available
+        # Aggregate by date
+        grouped = sentiment_df.groupby('date')
+        features = []
+        for date, group in grouped:
+            N_t = len(group)
+            S_t = group['polarity'].mean()
+            sigma_t = group['polarity'].std(ddof=0)
+            V_t = N_t
+            logV_t = np.log(1 + N_t)
+            AI_t = S_t * logV_t
             if 'goldstein' in group.columns:
-                features.update({
-                    'goldstein_mean': group['goldstein'].mean(),
-                    'goldstein_std': group['goldstein'].std(),
-                    'goldstein_impact': group['goldstein'].mean() * features['log_volume'],
-                    'sentiment_goldstein_corr': group['polarity'].corr(group['goldstein'])
-                })
-                
-            daily_features.append(features)
-            
-        return pd.DataFrame(daily_features) 
+                G_t = group['goldstein'].mean()
+                sigmaG_t = group['goldstein'].std(ddof=0)
+            else:
+                G_t = np.nan
+                sigmaG_t = np.nan
+            features.append({
+                'date': date,
+                'mean_sentiment': S_t,
+                'sentiment_std': sigma_t,
+                'news_volume': V_t,
+                'log_volume': logV_t,
+                'article_impact': AI_t,
+                'goldstein_mean': G_t,
+                'goldstein_std': sigmaG_t
+            })
+        df = pd.DataFrame(features)
+        df = df.sort_values('date').reset_index(drop=True)
+
+        # Add lags (1,2,3) for all features except date
+        for col in ['mean_sentiment', 'sentiment_std', 'news_volume', 'log_volume', 'article_impact', 'goldstein_mean', 'goldstein_std']:
+            for lag in [1, 2, 3]:
+                df[f'{col}_lag_{lag}'] = df[col].shift(lag)
+
+        # Add moving averages (5, 20) for mean_sentiment
+        for window in [5, 20]:
+            df[f'mean_sentiment_ma_{window}d'] = df['mean_sentiment'].rolling(window).mean()
+
+        # Sentiment acceleration: MA5 - MA20
+        df['sentiment_acceleration'] = df['mean_sentiment_ma_5d'] - df['mean_sentiment_ma_20d']
+
+        # Rolling std devs (5, 10) for mean_sentiment
+        for window in [5, 10]:
+            df[f'mean_sentiment_std_{window}d'] = df['mean_sentiment'].rolling(window).std()
+
+        # Rolling sums (5, 10) for news_volume
+        for window in [5, 10]:
+            df[f'news_volume_sum_{window}d'] = df['news_volume'].rolling(window).sum()
+
+        return df.dropna().reset_index(drop=True) 
