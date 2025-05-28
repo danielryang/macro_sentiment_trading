@@ -68,88 +68,54 @@ class ModelTrainer:
             )
         }
         
-    def prepare_features(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def prepare_features(self, data: pd.DataFrame, scaler=None, fit_scaler=True):
         """
-        Prepare features and target for training.
-        
+        Prepare features and target for training. Standardize features for logistic regression using only training data stats.
         Args:
             data: DataFrame with features and target
-            
+            scaler: Optional StandardScaler instance
+            fit_scaler: If True, fit scaler; else, transform only
         Returns:
-            Tuple of (X, y) arrays
+            X, y, feature_cols, scaler
         """
-        # Get feature columns (exclude date, returns, and target)
-        feature_cols = [col for col in data.columns 
-                       if col not in ['date', 'returns', 'target', 'Open', 'High', 'Low', 'Close', 'Volume']]
-        
+        feature_cols = [col for col in data.columns if col not in ['date', 'returns', 'target', 'Open', 'High', 'Low', 'Close', 'Volume', 'index']]
         X = data[feature_cols].values
         y = data['target'].values
-        
-        # Scale features
-        X = self.scaler.fit_transform(X)
-        
-        return X, y, feature_cols
+        if scaler is None:
+            scaler = StandardScaler()
+        if fit_scaler:
+            X_scaled = scaler.fit_transform(X)
+        else:
+            X_scaled = scaler.transform(X)
+        return X_scaled, y, feature_cols, scaler
         
     def train_models(self, data: pd.DataFrame) -> Dict[str, object]:
         """
-        Train both logistic regression and XGBoost models.
-        
-        Args:
-            data: DataFrame with features and target
-            
-        Returns:
-            Dictionary of trained models
+        Train both logistic regression and XGBoost models using only training data for scaling.
+        Returns dict of trained models and scalers.
         """
-        X, y, feature_cols = self.prepare_features(data)
-        
-        # Initialize TimeSeriesSplit for cross-validation
-        tscv = TimeSeriesSplit(n_splits=5)
-        
+        X, y, feature_cols, scaler = self.prepare_features(data, fit_scaler=True)
         trained_models = {}
+        trained_scalers = {}
         for name, model in self.models.items():
-            # Perform time-series cross-validation
-            cv_scores = []
-            for train_idx, val_idx in tscv.split(X):
-                X_train, X_val = X[train_idx], X[val_idx]
-                y_train, y_val = y[train_idx], y[val_idx]
-                
-                # Train model
-                model.fit(
-                    X_train, y_train,
-                    eval_set=[(X_val, y_val)],
-                    early_stopping_rounds=50 if name == 'xgboost' else None,
-                    verbose=False
-                )
-                
-                # Evaluate on validation set
-                val_score = model.score(X_val, y_val)
-                cv_scores.append(val_score)
-            
-            # Train final model on full dataset
-            model.fit(X, y)
+            if name == 'logistic':
+                model.fit(X, y)
+                trained_scalers[name] = scaler
+            else:
+                model.fit(X, y)
             trained_models[name] = model
-            logger.info(f"Trained {name} model with mean CV score: {np.mean(cv_scores):.4f}")
-            
-        return trained_models
+        return trained_models, trained_scalers
         
-    def generate_signals(self, model: object, data: pd.DataFrame) -> pd.Series:
+    def generate_signals(self, model: object, data: pd.DataFrame, scaler=None) -> pd.Series:
         """
-        Generate trading signals from model predictions.
-        
-        Args:
-            model: Trained model
-            data: DataFrame with features
-            
-        Returns:
-            Series of trading signals (-1 for short, 1 for long)
+        Generate trading signals from model predictions. Use scaler for logistic regression.
         """
-        X, _, _ = self.prepare_features(data)
+        if scaler is not None:
+            X, _, _, _ = self.prepare_features(data, scaler=scaler, fit_scaler=False)
+        else:
+            X, _, _, _ = self.prepare_features(data, fit_scaler=False)
         probas = model.predict_proba(X)[:, 1]
-        
-        # Use dynamic threshold based on prediction distribution
-        threshold = np.percentile(probas, 60)  # More conservative threshold
-        
-        return pd.Series(np.where(probas > threshold, 1, -1), index=data.index)
+        return pd.Series(np.where(probas > 0.5, 1, -1), index=data.index)
         
     def compute_returns(self, signals: pd.Series, data: pd.DataFrame, 
                        transaction_cost: float) -> pd.Series:
@@ -177,44 +143,27 @@ class ModelTrainer:
         
     def backtest(self, data: pd.DataFrame, transaction_cost: float) -> Dict[str, pd.DataFrame]:
         """
-        Perform backtest using expanding window approach.
-        
-        Args:
-            data: DataFrame with features and market data
-            transaction_cost: Transaction cost per round trip
-            
-        Returns:
-            Dictionary with backtest results for each model
+        Perform backtest using expanding window approach, strictly as in the research.
         """
-        # Define fold dates
         start_date = data['date'].min()
         end_date = data['date'].max()
-        fold_duration = timedelta(days=365 * 2)  # 2 years per fold
-        
+        fold_duration = timedelta(days=365 * 2)
         results = {}
-        
         for model_name in self.models.keys():
             fold_results = []
             current_start = start_date
-            
+            scaler = None
             while current_start + fold_duration < end_date:
-                # Define train and test periods
                 train_end = current_start + fold_duration
                 test_end = min(train_end + timedelta(days=365), end_date)
-                
-                # Split data
                 train_data = data[(data['date'] >= current_start) & (data['date'] < train_end)]
                 test_data = data[(data['date'] >= train_end) & (data['date'] < test_end)]
-                
                 if len(train_data) > 0 and len(test_data) > 0:
-                    # Train model
-                    model = self.train_models(train_data)[model_name]
-                    
-                    # Generate signals and compute returns
-                    signals = self.generate_signals(model, test_data)
+                    trained_models, trained_scalers = self.train_models(train_data)
+                    model = trained_models[model_name]
+                    scaler = trained_scalers.get(model_name, None)
+                    signals = self.generate_signals(model, test_data, scaler=scaler)
                     returns = self.compute_returns(signals, test_data, transaction_cost)
-                    
-                    # Store results
                     fold_results.append(pd.DataFrame({
                         'date': test_data['date'],
                         'returns': returns,
@@ -222,13 +171,9 @@ class ModelTrainer:
                         'signals': signals,
                         'position_changes': signals.diff().abs()
                     }))
-                    
                 current_start = train_end
-                
-            # Combine results from all folds
             if fold_results:
                 results[model_name] = pd.concat(fold_results)
-                
         return results
         
     def compute_metrics(self, returns: pd.Series) -> Dict[str, float]:
