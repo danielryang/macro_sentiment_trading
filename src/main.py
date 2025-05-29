@@ -137,6 +137,6 @@ if __name__ == "__main__":
     os.makedirs('results', exist_ok=True)
     
     # Run pipeline for the specified date range
-    start_date = "2015-01-01"
-    end_date = "2025-04-30"
+    start_date = "2015-02-18"
+    end_date = datetime.now().strftime("%Y-%m-%d")  # Use current date as end date
     run_pipeline(start_date, end_date) 

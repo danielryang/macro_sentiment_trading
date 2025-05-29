@@ -78,6 +78,30 @@ cd macro_sentiment_trading
 pip install -r requirements.txt
 ```
 
+### Docker Setup (Alternative Installation)
+
+If you prefer using Docker, you can set up the environment using the provided Dockerfile:
+
+1. Build the Docker image:
+```bash
+docker build -t macro-sentiment-trading .
+```
+
+2. Run the container:
+```bash
+docker run -it macro-sentiment-trading
+```
+
+For development with data persistence:
+```bash
+docker run -it \
+    -v $(pwd)/data:/app/data \
+    -v $(pwd)/results:/app/results \
+    macro-sentiment-trading
+```
+
+Note: Replace `$(pwd)` with `%cd%` on Windows PowerShell.
+
 ## Usage
 
 Run the complete pipeline:
