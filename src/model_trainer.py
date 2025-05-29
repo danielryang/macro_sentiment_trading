@@ -117,29 +117,29 @@ class ModelTrainer:
         probas = model.predict_proba(X)[:, 1]
         return pd.Series(np.where(probas > 0.5, 1, -1), index=data.index)
         
-    def compute_returns(self, signals: pd.Series, data: pd.DataFrame, 
-                       transaction_cost: float) -> pd.Series:
+    def compute_returns(self, signals: pd.Series, data: pd.DataFrame, transaction_cost: float) -> pd.Series:
         """
-        Compute strategy returns including transaction costs.
-        
+        Compute strategy returns including transaction costs, using Rust extension if available.
         Args:
             signals: Series of trading signals
             data: DataFrame with market data
             transaction_cost: Transaction cost per round trip
-            
         Returns:
             Series of strategy returns
         """
-        # Compute position changes
-        position_changes = signals.diff().abs()
-        
-        # Compute strategy returns
-        strategy_returns = signals.shift(1) * data['returns']
-        
-        # Subtract transaction costs
-        strategy_returns = strategy_returns - position_changes * transaction_cost
-        
-        return strategy_returns
+        try:
+            import rust_trade_sim
+            # Align signals and returns as float lists
+            sig = signals.astype(float).tolist()
+            rets = data['returns'].astype(float).tolist()
+            strat_returns, _ = rust_trade_sim.simulate_trades(sig, rets, float(transaction_cost))
+            return pd.Series(strat_returns, index=signals.index)
+        except ImportError:
+            # Fallback to Python implementation
+            position_changes = signals.diff().abs()
+            strategy_returns = signals.shift(1) * data['returns']
+            strategy_returns = strategy_returns - position_changes * transaction_cost
+            return strategy_returns
         
     def backtest(self, data: pd.DataFrame, transaction_cost: float) -> Dict[str, pd.DataFrame]:
         """
