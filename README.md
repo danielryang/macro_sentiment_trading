@@ -60,10 +60,18 @@ cd macro_sentiment_trading
 ```
 
 2. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+   
+   a) On Windows:
+   ```sh
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+   
+   b) On macOS/Linux:
+   ```sh
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
 3. Install dependencies:
 ```bash
@@ -141,3 +149,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Reference
 
 This implementation is based on the research paper: [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1)
+
+
