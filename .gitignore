@@ -1,0 +1,22 @@
+# Python virtual environment
+venv/
+
+# maturin and Rust build artifacts
+rust_trade_sim/target/
+*.so
+*.pyd
+*.dll
+*.dylib
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Wheels and build outputs
+dist/
+build/
+*.whl
+
+# Rust package lock file
+Cargo.lock 
