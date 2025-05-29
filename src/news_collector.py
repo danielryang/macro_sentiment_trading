@@ -29,6 +29,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Dict
 import logging
+import time
+import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +38,41 @@ logger = logging.getLogger(__name__)
 class GDELTCollector:
     def __init__(self):
         self.base_url = "https://api.gdeltproject.org/api/v2/doc/doc"
+        self.max_retries = 5
+        self.base_delay = 1  # Base delay in seconds
+        self.max_delay = 32  # Maximum delay in seconds
+        
+    def _make_request(self, query: Dict) -> requests.Response:
+        """
+        Make a request to the GDELT API with exponential backoff.
+        
+        Args:
+            query: Query parameters for the API request
+            
+        Returns:
+            Response object from the API
+        """
+        for attempt in range(self.max_retries):
+            try:
+                # Add random jitter to avoid thundering herd
+                delay = min(self.base_delay * (2 ** attempt) + random.uniform(0, 1), self.max_delay)
+                time.sleep(delay)
+                
+                response = requests.get(self.base_url, params=query)
+                
+                if response.status_code == 429:  # Too Many Requests
+                    logger.warning(f"Rate limited on attempt {attempt + 1}. Retrying after {delay:.2f}s...")
+                    continue
+                    
+                response.raise_for_status()
+                return response
+                
+            except requests.exceptions.RequestException as e:
+                if attempt == self.max_retries - 1:
+                    raise
+                logger.warning(f"Request failed on attempt {attempt + 1}: {str(e)}")
+                
+        raise requests.exceptions.RequestException("Max retries exceeded")
         
     def fetch_events(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
@@ -58,8 +95,7 @@ class GDELTCollector:
         }
         
         try:
-            response = requests.get(self.base_url, params=query)
-            response.raise_for_status()
+            response = self._make_request(query)
             data = response.json()
             
             # Convert to DataFrame
