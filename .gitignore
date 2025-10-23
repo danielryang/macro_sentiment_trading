@@ -46,11 +46,9 @@ logs/
 signals/
 forecasts/
 
-# Results directory (except models which use Git LFS)
-results/**/*.csv
-results/**/*.parquet
-results/**/*.pkl
-!results/models/*.pkl
+# Results directory (generated files)
+results/
+!results/.gitkeep
 
 # Notebook outputs
 notebooks/data/
