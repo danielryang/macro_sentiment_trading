@@ -50,6 +50,22 @@ forecasts/
 results/
 !results/.gitkeep
 
+# Documentation files (keep only README.md)
+*.md
+!README.md
+
+# Claude AI files
+.claude/
+
+# Data files (generated)
+data/
+alpha_analytics_results/
+
+# Temporary files
+*.bat
+remove_emojis.py
+installed_packages.txt
+
 # Notebook outputs
 notebooks/data/
 notebooks/results/
