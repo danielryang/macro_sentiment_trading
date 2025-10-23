@@ -54,6 +54,19 @@ python cli/main.py collect-news --start-date 2024-01-01 --end-date 2024-01-31
 python cli/main.py status
 ```
 
+### Example Usage & Notebooks
+
+For detailed examples and interactive tutorials, see the Jupyter notebooks:
+
+- **`notebooks/01_training_simulation.ipynb`** - Complete pipeline walkthrough
+- **`notebooks/02_signal_generation.ipynb`** - Signal generation examples  
+- **`notebooks/03_alpha_analytics.ipynb`** - Performance analysis and visualization
+
+```bash
+# Launch Jupyter to explore notebooks
+jupyter notebook notebooks/
+```
+
 ## API Setup & Configuration
 
 ### GDELT BigQuery Setup (Recommended)
