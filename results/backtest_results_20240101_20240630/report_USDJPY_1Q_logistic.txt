@@ -1,0 +1,39 @@
+================================================================================
+COMPREHENSIVE PERFORMANCE ANALYSIS
+================================================================================
+
+RETURN METRICS:
+----------------------------------------
+Total Return:              0.24%
+Annualized Return:         5.65%
+Geometric Mean Return:     0.02%
+Arithmetic Mean Return:    0.02%
+
+RISK METRICS:
+----------------------------------------
+Volatility:                4.08%
+Sharpe Ratio:               0.88
+Sortino Ratio:              0.00
+Calmar Ratio:              10.91
+
+DRAWDOWN METRICS:
+----------------------------------------
+Maximum Drawdown:         -0.52%
+Average Drawdown:         -0.41%
+Max DD Duration:               4 days
+Avg Recovery Time:           0.0 days
+
+TRADE METRICS:
+----------------------------------------
+Total Trades:                 11
+Win Rate:                 18.18%
+Profit Factor:              1.47
+Win/Loss Ratio:             0.73
+
+ADVANCED RISK METRICS:
+----------------------------------------
+VaR (5%):                 -0.26%
+CVaR (5%):                -0.52%
+Gain-to-Pain Ratio:         1.47
+Sterling Ratio:            13.70
+================================================================================

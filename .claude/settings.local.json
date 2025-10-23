@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "WebSearch",
+      "Bash(pip install:*)",
+      "Bash(dir:*)",
+      "Bash(echo $GOOGLE_CLOUD_PROJECT)",
+      "Bash(cd:*)",
+      "mcp__ide__executeCode",
+      "Bash(timeout 30 python:*)",
+      "WebFetch(domain:arxiv.org)",
+      "Bash(/bashes)",
+      "Bash(findstr:*)",
+      "Bash(timeout 60 python:*)",
+      "Bash(timeout 120 python cli/main.py run-pipeline --start-date 2023-07-01 --end-date 2023-12-31 --assets EURUSD --skip-sentiment)",
+      "Bash(find:*)",
+      "Read(//c/Users/danie/**)",
+      "Bash(grep:*)",
+      "Bash(pip uninstall:*)",
+      "WebFetch(domain:jfin-swufe.springeropen.com)",
+      "WebFetch(domain:link.springer.com)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "Bash(timeout 120 python cli/main.py multi-timeframe-signals:*)",
+      "Bash(timeout 180 python cli/main.py multi-timeframe-signals:*)",
+      "Bash(timeout 180 python cli/main.py run-pipeline --start-date 2023-07-01 --end-date 2023-12-31 --assets BTCUSD --skip-sentiment)",
+      "Bash(timeout 120 python cli/main.py run-pipeline --start-date 2024-03-01 --end-date 2024-08-31 --assets BTCUSD --skip-sentiment)",
+      "Bash(timeout:*)",
+      "Bash(tasklist)",
+      "Read(//c/**)",
+      "Bash(wmic:*)",
+      "Bash(Get-Process)",
+      "Bash(Where-Object {$_rocessName -eq \"python\"})",
+      "Bash(del remove_emojis.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

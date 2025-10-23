@@ -1,0 +1,213 @@
+{
+  "models": {
+    "EURUSD_logistic_20251022_234036_319f38e0": {
+      "asset": "EURUSD",
+      "model_type": "logistic",
+      "training_date": "2025-10-22T23:40:36.143960",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": null,
+        "end_date": null,
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\EURUSD_logistic_20251022_234036_319f38e0\\model.pkl",
+      "scaler_path": "results\\models\\EURUSD_logistic_20251022_234036_319f38e0\\scaler.pkl",
+      "feature_path": "results\\models\\EURUSD_logistic_20251022_234036_319f38e0\\features.json",
+      "registered_at": "2025-10-22T23:40:36.143960"
+    },
+    "EURUSD_xgboost_20251022_234036_319f38e0": {
+      "asset": "EURUSD",
+      "model_type": "xgboost",
+      "training_date": "2025-10-22T23:40:36.182055",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": null,
+        "end_date": null,
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\EURUSD_xgboost_20251022_234036_319f38e0\\model.pkl",
+      "scaler_path": null,
+      "feature_path": "results\\models\\EURUSD_xgboost_20251022_234036_319f38e0\\features.json",
+      "registered_at": "2025-10-22T23:40:36.182055"
+    },
+    "USDJPY_logistic_20251022_234257_319f38e0": {
+      "asset": "USDJPY",
+      "model_type": "logistic",
+      "training_date": "2025-10-22T23:42:57.509855",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\USDJPY_logistic_20251022_234257_319f38e0\\model.pkl",
+      "scaler_path": "results\\models\\USDJPY_logistic_20251022_234257_319f38e0\\scaler.pkl",
+      "feature_path": "results\\models\\USDJPY_logistic_20251022_234257_319f38e0\\features.json",
+      "registered_at": "2025-10-22T23:42:57.509855"
+    },
+    "USDJPY_xgboost_20251022_234257_319f38e0": {
+      "asset": "USDJPY",
+      "model_type": "xgboost",
+      "training_date": "2025-10-22T23:42:57.556982",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\USDJPY_xgboost_20251022_234257_319f38e0\\model.pkl",
+      "scaler_path": null,
+      "feature_path": "results\\models\\USDJPY_xgboost_20251022_234257_319f38e0\\features.json",
+      "registered_at": "2025-10-22T23:42:57.556982"
+    },
+    "EURUSD_logistic_20251023_001055_319f38e0": {
+      "asset": "EURUSD",
+      "model_type": "logistic",
+      "training_date": "2025-10-23T00:10:55.662410",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\EURUSD_logistic_20251023_001055_319f38e0\\model.pkl",
+      "scaler_path": "results\\models\\EURUSD_logistic_20251023_001055_319f38e0\\scaler.pkl",
+      "feature_path": "results\\models\\EURUSD_logistic_20251023_001055_319f38e0\\features.json",
+      "registered_at": "2025-10-23T00:10:55.662410"
+    },
+    "EURUSD_xgboost_20251023_001055_319f38e0": {
+      "asset": "EURUSD",
+      "model_type": "xgboost",
+      "training_date": "2025-10-23T00:10:55.713340",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\EURUSD_xgboost_20251023_001055_319f38e0\\model.pkl",
+      "scaler_path": null,
+      "feature_path": "results\\models\\EURUSD_xgboost_20251023_001055_319f38e0\\features.json",
+      "registered_at": "2025-10-23T00:10:55.713340"
+    },
+    "TNOTE_logistic_20251023_001058_44686faf": {
+      "asset": "TNOTE",
+      "model_type": "logistic",
+      "training_date": "2025-10-23T00:10:58.998758",
+      "feature_count": 14,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-02",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-02 00:00:00"
+      },
+      "model_path": "results\\models\\TNOTE_logistic_20251023_001058_44686faf\\model.pkl",
+      "scaler_path": "results\\models\\TNOTE_logistic_20251023_001058_44686faf\\scaler.pkl",
+      "feature_path": "results\\models\\TNOTE_logistic_20251023_001058_44686faf\\features.json",
+      "registered_at": "2025-10-23T00:10:58.998758"
+    },
+    "TNOTE_xgboost_20251023_001059_44686faf": {
+      "asset": "TNOTE",
+      "model_type": "xgboost",
+      "training_date": "2025-10-23T00:10:59.104789",
+      "feature_count": 14,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-02",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-02 00:00:00"
+      },
+      "model_path": "results\\models\\TNOTE_xgboost_20251023_001059_44686faf\\model.pkl",
+      "scaler_path": null,
+      "feature_path": "results\\models\\TNOTE_xgboost_20251023_001059_44686faf\\features.json",
+      "registered_at": "2025-10-23T00:10:59.104789"
+    },
+    "USDJPY_logistic_20251023_001101_319f38e0": {
+      "asset": "USDJPY",
+      "model_type": "logistic",
+      "training_date": "2025-10-23T00:11:01.934764",
+      "feature_count": 20,
+      "metrics": {
+        "accuracy": 0.75,
+        "precision": 0.7,
+        "recall": 0.65,
+        "f1_score": 0.67
+      },
+      "version": "1.0.0",
+      "training_params": {
+        "time_window": "2024-01-01 to 2024-06-30",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-05",
+        "data_source": "2024-01-01 00:00:00"
+      },
+      "model_path": "results\\models\\USDJPY_logistic_20251023_001101_319f38e0\\model.pkl",
+      "scaler_path": "results\\models\\USDJPY_logistic_20251023_001101_319f38e0\\scaler.pkl",
+      "feature_path": "results\\models\\USDJPY_logistic_20251023_001101_319f38e0\\features.json",
+      "registered_at": "2025-10-23T00:11:01.934764"
+    }
+  },
+  "last_updated": "2025-10-23T00:11:01.934764",
+  "version": "1.0"
+}

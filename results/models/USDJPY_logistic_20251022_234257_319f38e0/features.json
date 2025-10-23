@@ -1,0 +1,22 @@
+[
+  "vol20",
+  "sma20",
+  "rsi14",
+  "sma50",
+  "trend_strength",
+  "return_lag_1",
+  "goldstein_mean_lag_1",
+  "goldstein_std_lag_1",
+  "goldstein_mean_lag_2",
+  "goldstein_std_lag_2",
+  "goldstein_mean_lag_3",
+  "goldstein_std_lag_3",
+  "goldstein_mean_lag_5",
+  "goldstein_std_lag_5",
+  "goldstein_mean_ma_5d",
+  "goldstein_mean_std_5d",
+  "goldstein_std_ma_5d",
+  "goldstein_std_std_5d",
+  "article_impact_ma_5d",
+  "article_impact_std_5d"
+]
