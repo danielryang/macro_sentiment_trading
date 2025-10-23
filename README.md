@@ -1,162 +1,744 @@
 # Macro Sentiment Trading Pipeline
 
-This project implements an end-to-end pipeline for trading macro assets based on news sentiment analysis. The pipeline combines news data from GDELT, sentiment analysis using FinBERT, and machine learning models to generate trading signals.
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-## Pipeline Overview
+A sophisticated quantitative finance system implementing academic research for macro sentiment-based trading. This pipeline combines global news event data from GDELT, financial sentiment analysis using FinBERT, and machine learning models to generate systematic trading signals for major currency pairs and financial assets.
 
-1. **News Collection and Filtering**
-   - Sources daily event records from GDELT v2 API
-   - Filters for macro-relevant events (EventCode 100-199)
-   - Retains top 100 events per day by article coverage
+**⚠️ Disclaimer**: This software is for educational and research purposes only. Not financial advice. Trading involves risk.
 
-2. **Headline Extraction**
-   - Extracts headlines from article URLs
-   - Cleans and normalizes text
-   - Truncates to 512 WordPiece tokens
+## Research Foundation
 
-3. **Sentiment Scoring**
-   - Uses FinBERT model for sentiment analysis
-   - Computes polarity scores (-1 to +1)
-   - Generates daily sentiment features
+Based on academic research from [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1), this system tests the hypothesis that news sentiment from macro-relevant events contains predictive information for future price movements in major financial assets.
 
-4. **Market Data Processing**
-   - Downloads price data for EUR/USD, USD/JPY, and Treasury futures
-   - Computes returns and technical features
-   - Aligns market data with sentiment features
+**Key Features:**
+- **Production-Ready CLI**: Complete command-line interface for all pipeline operations
+- **Academic Rigor**: Expanding window backtesting to prevent look-ahead bias
+- **Model Interpretability**: SHAP analysis for feature importance and model explainability
+- **Global Coverage**: GDELT database provides comprehensive worldwide event coverage
+- **Multi-Asset Support**: 35+ assets including FX pairs, cryptocurrencies, equities, and commodities
+- **Scalable Architecture**: Handles datasets from thousands to hundreds of thousands of events
+- **Transaction Cost Integration**: Realistic performance evaluation with asset-specific costs
 
-5. **Predictive Modeling**
-   - Implements both logistic regression and XGBoost models
-   - Uses expanding window backtest approach
-   - Includes transaction costs in performance calculation
+## Installation & Setup
 
-6. **Model Interpretation**
-   - Computes SHAP values for feature importance
-   - Generates performance metrics and visualizations
+### Prerequisites
+- Python 3.8+ (3.9+ recommended)
+- 4GB+ RAM (8GB+ recommended for large datasets)
+- 2GB+ disk space for data storage
+- Internet connection for news data collection
 
-## Project Structure
+### Quick Installation
 
-```
-.
-├── src/
-│   ├── news_collector.py      # GDELT data collection
-│   ├── headline_processor.py  # Headline extraction and cleaning
-│   ├── sentiment_analyzer.py  # FinBERT sentiment analysis
-│   ├── market_processor.py    # Market data processing
-│   ├── model_trainer.py       # Model training and backtesting
-│   └── main.py               # Pipeline orchestration
-├── data/                     # Data storage
-├── results/                  # Backtest results and metrics
-├── notebooks/               # Jupyter notebooks for analysis
-├── requirements.txt         # Project dependencies
-└── README.md               # Project documentation
-```
-
-## Installation
-
-1. Clone the repository:
+1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/macro_sentiment_trading.git
+git clone https://github.com/danielryang/macro_sentiment_trading.git
 cd macro_sentiment_trading
 ```
 
-2. Create a virtual environment:
-   
-   a) On Windows:
-   ```sh
+2. **Create and activate virtual environment:**
+
+   **Windows:**
+   ```cmd
    python -m venv venv
    venv\Scripts\activate
    ```
-   
-   b) On macOS/Linux:
-   ```sh
+
+   **macOS/Linux:**
+   ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. Install dependencies:
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-### Docker Setup (Alternative Installation)
-
-If you prefer using Docker, you can set up the environment using the provided Dockerfile:
-
-1. Build the Docker image:
+4. **Install the package:**
 ```bash
+pip install -e .
+```
+
+5. **Setup Git LFS (for downloading pre-trained models):**
+```bash
+git lfs install
+git lfs pull
+```
+
+6. **Configure environment (optional):**
+```bash
+cp env.example .env
+# Edit .env file with your API keys and preferences
+```
+
+## CLI Usage Guide
+
+### Main Commands Overview
+
+The CLI provides several commands for different use cases:
+
+```bash
+python cli/main.py --help
+```
+
+**Available Commands:**
+- `run-pipeline`: Run the complete trading pipeline
+- `get-signals`: Get current trading signals from pre-trained models
+- `collect-news`: Collect news data from GDELT
+- `process-sentiment`: Process sentiment analysis
+- `process-market`: Process market data
+- `train-models`: Train trading models
+- `visualize`: Generate visualizations
+- `forecast-signals`: Generate comprehensive multi-timeframe forecasts
+- `multi-timeframe-signals`: Generate signals for multiple timeframes
+- `multi-timeframe-backtest`: Run multi-timeframe backtesting
+- `status`: Check pipeline status
+
+### 1. Getting Started - Quick Signal Check
+
+First, verify the system is working by getting current signals:
+
+```bash
+# Get current trading signals (works immediately)
+python cli/main.py get-signals
+```
+
+**Expected Output:**
+```
+================================================================================
+                    CURRENT TRADING SIGNALS
+================================================================================
+Generated at: 2025-09-16 21:13:13
+
+EUR/USD (EURUSD):
+----------------------------------------
+  Logistic: SELL (-1) | Confidence:  36.1%
+  Xgboost : SELL (-1) | Confidence:  50.0%
+
+USD/JPY (USDJPY):
+----------------------------------------
+  Logistic: HOLD ( 0) | Confidence:  41.4%
+  Xgboost : HOLD ( 0) | Confidence:  40.1%
+```
+
+**Signal Options:**
+```bash
+# Get signals for specific assets
+python cli/main.py get-signals --assets EURUSD GBPUSD
+
+# Save signals to file
+python cli/main.py get-signals --output-file signals/current_signals.json
+
+# Use specific models only
+python cli/main.py get-signals --models xgboost
+```
+
+### 2. Pipeline Status Check
+
+Check what data and models are available:
+
+```bash
+python cli/main.py status
+```
+
+**Expected Output:**
+```
+[DATA] Checking data status...
+  [OK] data/news: 45 files
+  [OK] data/processed: 1 files
+  [OK] data/raw: 1 files
+[MODEL] Checking model status...
+  [OK] Found 1 model files
+[RESULTS] Checking results status...
+  [OK] Found 449 result files
+```
+
+### 3. Full Pipeline Execution
+
+#### Basic Pipeline Run
+
+**Recommended for beginners:**
+```bash
+# Small test run (data exploration only)
+python cli/main.py run-pipeline \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --assets EURUSD \
+    --skip-training
+```
+*This collects data and processes features without training models (fast).*
+
+#### Production Pipeline Run
+
+**For serious analysis:**
+```bash
+# Full year analysis with model training
+python cli/main.py run-pipeline \
+    --start-date 2023-01-01 \
+    --end-date 2023-12-31 \
+    --assets EURUSD USDJPY GBPUSD \
+    --models logistic xgboost \
+    --output-dir results/2023_analysis
+```
+
+**Expected Runtime:**
+- 1 month (exploration): 1-5 minutes
+- 1 year (full training): 15-45 minutes
+- Multi-year: 1-3 hours
+
+#### Command Options
+
+**Core Options:**
+```bash
+--start-date YYYY-MM-DD     # Required: Analysis start date
+--end-date YYYY-MM-DD       # Required: Analysis end date
+--assets [ASSETS ...]       # Assets to analyze (default: EURUSD USDJPY TNOTE)
+--models [MODELS ...]       # Models to train (default: logistic xgboost)
+--output-dir PATH           # Results directory (default: results/)
+```
+
+**Data Collection Options:**
+```bash
+--method {free,bigquery}    # Force specific GDELT method
+--force-refresh             # Force redownload of cached data
+```
+
+**Skip Options (for faster testing):**
+```bash
+--skip-news                 # Skip news collection (use cached)
+--skip-sentiment            # Skip sentiment analysis (use cached)
+--skip-market              # Skip market data processing
+--skip-training            # Skip model training (data exploration only)
+```
+
+### 4. Specialized Commands
+
+#### Multi-Timeframe Analysis
+
+Generate signals across different time horizons (1D, 1W, 1M, 1Y):
+
+**Basic Multi-Timeframe Signals:**
+```bash
+# View 1D, 1W, 1M, 1Y signals for EUR/USD and GBP/USD
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD \
+    --timeframes 1D 1W 1M 1Y
+```
+
+**Save to JSON File:**
+```bash
+# Save structured multi-timeframe data
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD \
+    --timeframes 1D 1W 1M 1Y \
+    --output-file signals/multi_timeframe_signals.json
+```
+
+**High-Confidence Signals Only:**
+```bash
+# Filter for signals with >70% confidence
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD \
+    --confidence-threshold 0.7 \
+    --timeframes 1D 1W 1M 1Y
+```
+
+**All Available Timeframes:**
+```bash
+# Default includes: 1D, 2D, 3D, 1W, 1M, 1Q, 1Y
+python cli/main.py multi-timeframe-signals --assets EURUSD
+```
+
+**Output Includes:**
+- **Next Day (1D)**: Tomorrow's signal with confidence levels
+- **Next Week (1W)**: Weekly outlook
+- **Next Month (1M)**: Monthly trend prediction
+- **Next Year (1Y)**: Annual directional bias
+- **Strategic Recommendations**: Consensus across timeframes
+- **Confidence Levels**: HIGH (>70%), MEDIUM (40-70%), LOW (<40%)
+
+**Multi-Timeframe Backtesting:**
+```bash
+# Historical performance across timeframes
+python cli/main.py multi-timeframe-backtest \
+    --assets EURUSD \
+    --models xgboost
+```
+
+#### Comprehensive Forecasting
+
+Generate detailed forecasts with SHAP analysis:
+
+```bash
+python cli/main.py forecast-signals \
+    --output-file forecasts/comprehensive_forecast.json
+```
+
+#### Data Collection Only
+
+Collect news data without full pipeline:
+
+```bash
+# Collect 1 month of news data
+python cli/main.py collect-news \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --output-file data/news/jan_2024.parquet
+```
+
+#### Visualizations
+
+Generate charts and analysis plots:
+
+```bash
+# Generate all visualizations
+python cli/main.py visualize \
+    --results-path results/ \
+    --types data performance shap
+
+# Specific visualization types
+python cli/main.py visualize \
+    --results-path results/ \
+    --types performance \
+    --output-dir visualizations/
+```
+
+## Usage Examples by Use Case
+
+### For Researchers
+
+**Academic research and backtesting:**
+```bash
+# Multi-year comprehensive analysis
+python cli/main.py run-pipeline \
+    --start-date 2020-01-01 \
+    --end-date 2023-12-31 \
+    --assets EURUSD USDJPY GBPUSD AUDUSD \
+    --output-dir research/multi_year_study
+
+# Generate research visualizations
+python cli/main.py visualize \
+    --results-path research/multi_year_study \
+    --types data sentiment market performance shap
+```
+
+### For Traders
+
+**Daily Trading Workflow:**
+```bash
+# Get immediate signals
+python cli/main.py get-signals
+
+# Multi-timeframe analysis for context
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD \
+    --timeframes 1D 1W 1M \
+    --output-file signals/daily_analysis.json
+
+# Focus on high-confidence signals only
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD USDJPY \
+    --confidence-threshold 0.7 \
+    --timeframes 1D 1W
+```
+
+**Position Sizing & Risk Management:**
+```bash
+# Short-term trading (1D-1W outlook)
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD --timeframes 1D 1W
+
+# Medium-term positioning (1W-1M outlook)
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD --timeframes 1W 1M
+
+# Long-term investment (1M-1Y outlook)
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD --timeframes 1M 1Q 1Y
+```
+
+**Portfolio Overview:**
+```bash
+# All major pairs across timeframes
+python cli/main.py multi-timeframe-signals \
+    --assets EURUSD GBPUSD USDJPY AUDUSD \
+    --timeframes 1D 1W 1M 1Y \
+    --output-file portfolio/multi_timeframe_overview.json
+```
+
+### For Developers
+
+**Testing and development:**
+```bash
+# Quick system test
+python cli/main.py run-pipeline \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-05 \
+    --assets EURUSD \
+    --skip-training
+
+# Check system status
+python cli/main.py status
+
+# Test with fresh data
+python cli/main.py run-pipeline \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --assets EURUSD \
+    --force-refresh \
+    --skip-training
+```
+
+### For Production Deployment
+
+**Regular model updates:**
+```bash
+# Monthly model retraining
+python cli/main.py run-pipeline \
+    --start-date 2022-01-01 \
+    --end-date 2024-12-31 \
+    --assets EURUSD USDJPY GBPUSD \
+    --output-dir production/models_$(date +%Y%m)
+
+# Daily signal generation (fast)
+python cli/main.py get-signals \
+    --output-file production/signals/signals_$(date +%Y%m%d).json
+```
+
+## Supported Assets
+
+The system supports 35+ financial instruments:
+
+**Major FX Pairs:**
+- EURUSD, USDJPY, GBPUSD, AUDUSD, USDCHF, USDCAD, NZDUSD
+
+**Minor FX Pairs:**
+- EURGBP, EURJPY, GBPJPY, AUDJPY, EURCHF, GBPCHF, AUDCHF, EURAUD
+
+**Exotic FX Pairs:**
+- USDSGD, USDHKD, USDSEK, USDCNY, USDINR, USDBRL, USDMXN, USDKRW, USDTRY, USDPLN
+
+**Cross Pairs:**
+- PLNJPY, HKDJPY
+
+**Cryptocurrencies:**
+- BTCUSD, ETHUSD, ADAUSD, DOGEUSD, SOLUSD, AVAXUSD, DOTUSD, UNIUSD, LINKUSD, MATICUSD
+
+**Equities:**
+- SPY (S&P 500), QQQ (NASDAQ), IWM (Russell 2000), SQQQ (Short NASDAQ)
+
+**Commodities:**
+- GOLD (Gold Futures), TNOTE (Treasury Notes)
+
+## Configuration
+
+### Environment Variables (.env file)
+
+```bash
+# Data Source Configuration
+GDELT_METHOD=free              # 'free' or 'bigquery'
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
+BIGQUERY_MAX_COST_USD=5.00
+
+# Model Parameters
+DEFAULT_TRAINING_WINDOW=730    # Days for initial training
+DEFAULT_TEST_WINDOW=365        # Days for each test period
+BATCH_SIZE=128                 # Sentiment analysis batch size
+
+# Performance Settings
+MAX_WORKERS=4                  # Parallel processing threads
+CACHE_SENTIMENT=true           # Enable sentiment caching
+LOG_LEVEL=INFO                 # DEBUG, INFO, WARNING, ERROR
+```
+
+### Command-Line Configuration
+
+```bash
+# Global options (available for all commands)
+--config CONFIG               # Path to configuration file
+--log-level {DEBUG,INFO,WARNING,ERROR}
+--log-file LOG_FILE           # Path to log file
+--verbose, -v                 # Enable verbose output
+--dry-run                     # Show what would be done without executing
+--output                      # Save comprehensive output and logs
+```
+
+## Results & Output Files
+
+### Output Directory Structure
+
+```
+results/
+├── aligned_data_EURUSD.parquet      # Processed features for each asset
+├── backtest_results_EURUSD_xgboost.csv    # Detailed backtest results
+├── metrics_EURUSD.csv               # Performance metrics summary
+├── EURUSD_shap_values.csv           # SHAP feature importance
+├── EURUSD_shap_importance.png       # SHAP visualization
+├── models/                          # Trained models
+│   ├── model_EURUSD_xgboost.pkl
+│   ├── scaler_EURUSD_xgboost.pkl
+│   └── features_EURUSD_xgboost.pkl
+└── visualizations/                  # Charts and plots
+    ├── data_overview.png
+    ├── performance_comparison.png
+    └── sentiment_distribution.png
+```
+
+### Key Output Files
+
+**Backtest Results (`backtest_results_*.csv`):**
+```csv
+date,returns,cumulative_returns,signals,position_changes
+2024-01-31,0.0,1.0,-1,1.0
+2024-02-01,0.008737,1.008737,-1,0.0
+2024-02-02,0.003551,1.012320,-1,0.0
+```
+
+**Performance Metrics (`metrics_*.csv`):**
+```csv
+metric,logistic,xgboost
+total_return,0.012218,0.045123
+annualized_return,0.8443,2.1045
+sharpe_ratio,1.055,1.876
+max_drawdown,-0.0001,-0.0234
+win_rate,0.4,0.52
+```
+
+**SHAP Feature Importance (`*_shap_values.csv`):**
+```csv
+feature,importance
+mean_sentiment_lag_1,0.245
+goldstein_mean,0.189
+log_volume,0.156
+mean_sentiment_ma_5d,0.134
+```
+
+**Multi-Timeframe Signals (`multi_timeframe_signals.json`):**
+```json
+{
+  "signals": {
+    "1D": {
+      "signals": {
+        "EURUSD": {
+          "models": {
+            "xgboost": {
+              "signal": 2,
+              "confidence": 0.73,
+              "signal_meaning": {
+                "action": "BUY",
+                "description": "Strong bullish signal"
+              }
+            }
+          }
+        }
+      }
+    },
+    "1W": { ... },
+    "1M": { ... },
+    "1Y": { ... }
+  }
+}
+```
+
+**Understanding Multi-Timeframe Signals:**
+- **Signal Values**: SELL (0), HOLD (1), BUY (2)
+- **Confidence Levels**: HIGH (>70%), MEDIUM (40-70%), LOW (<40%)
+- **Timeframes**: 1D (next day), 1W (next week), 1M (next month), 1Y (next year)
+- **Strategic Recommendations**: Consensus view across all timeframes
+
+## Performance Expectations
+
+### Runtime Performance
+
+| Dataset Size | Data Collection | Full Pipeline | Use Case |
+|--------------|----------------|---------------|----------|
+| 1 week | 30 seconds | 2 minutes | Quick test |
+| 1 month | 2 minutes | 5 minutes | Development |
+| 1 year | 15 minutes | 45 minutes | Production |
+| 3+ years | 1 hour | 3 hours | Research |
+
+### Signal Quality Expectations
+
+**Realistic Performance Ranges:**
+- **Sharpe Ratio**: 0.0 to 2.0 (excellent > 1.5)
+- **Win Rate**: 35% to 65% (good > 50%)
+- **Maximum Drawdown**: -1% to -15% (excellent < -5%)
+- **Annual Return**: -10% to +50% (good > 10%)
+
+*Note: The original paper reported Sharpe ratios of 4.65-5.87, but this implementation achieves more realistic 0.0-2.0 range typical in quantitative finance.*
+
+## Date Range Guidelines
+
+### Minimum Requirements
+
+```bash
+# [ERROR] Too small - will be blocked by validation
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-01-31
+
+# [OK] Minimum for data exploration (no training)
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-01-31 --skip-training
+
+# [WARNING] Minimum for training (will show warnings)
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-06-30
+
+# [RECOMMENDED] Ideal for production
+python cli/main.py run-pipeline --start-date 2022-01-01 --end-date 2023-12-31
+```
+
+### Best Practices
+
+**For Model Training:**
+- Minimum: 6 months (180 days)
+- Recommended: 1-2 years
+- Optimal: 3+ years for robust backtesting
+
+**For Data Exploration:**
+- Any range works with `--skip-training`
+- Use recent dates for current market conditions
+- Use 1-3 months for feature analysis
+
+## Troubleshooting
+
+### Common Issues
+
+**Command Timeouts:**
+```bash
+# If CLI hangs, use timeout (Unix/Linux/Mac)
+timeout 300 python cli/main.py get-signals
+
+# Or use specific assets to reduce processing
+python cli/main.py get-signals --assets EURUSD
+```
+
+**Memory Issues:**
+```bash
+# Reduce assets for large date ranges
+python cli/main.py run-pipeline --start-date 2020-01-01 --end-date 2023-12-31 --assets EURUSD USDJPY
+
+# Use skip options to reduce processing
+python cli/main.py run-pipeline --start-date 2020-01-01 --end-date 2023-12-31 --skip-sentiment
+```
+
+**Data Collection Issues:**
+```bash
+# Force refresh if cached data is corrupted
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-12-31 --force-refresh
+
+# Use BigQuery method for reliability (requires setup)
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-12-31 --method bigquery
+```
+
+### Log Files
+
+Check logs for detailed error information:
+```bash
+# Default log location
+tail -f logs/cli.log
+
+# Custom log file
+python cli/main.py run-pipeline --log-file debug.log --log-level DEBUG --start-date 2024-01-01 --end-date 2024-01-31
+```
+
+## Docker Usage
+
+### Basic Docker Setup
+
+```bash
+# Build the image
 docker build -t macro-sentiment-trading .
-```
 
-2. Run the container:
-```bash
-docker run -it macro-sentiment-trading
-```
-
-For development with data persistence:
-```bash
+# Run with data persistence
 docker run -it \
     -v $(pwd)/data:/app/data \
     -v $(pwd)/results:/app/results \
+    -v $(pwd)/logs:/app/logs \
     macro-sentiment-trading
 ```
 
-Note: Replace `$(pwd)` with `%cd%` on Windows PowerShell.
+### Docker Commands
 
-## Usage
-
-Run the complete pipeline:
 ```bash
-python src/main.py
+# Get signals in container
+docker run --rm \
+    -v $(pwd)/signals:/app/signals \
+    macro-sentiment-trading \
+    python cli/main.py get-signals --output-file signals/docker_signals.json
+
+# Run pipeline in container
+docker run --rm \
+    -v $(pwd)/data:/app/data \
+    -v $(pwd)/results:/app/results \
+    macro-sentiment-trading \
+    python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-01-31 --skip-training
 ```
 
-The pipeline will:
-1. Collect news data from GDELT
-2. Process headlines and compute sentiment scores
-3. Download and process market data
-4. Train models and run backtests
-5. Generate performance metrics and SHAP values
-6. Save results to the `results/` directory
+## API Integration (Advanced)
 
-## Results
+### Programmatic Usage
 
-The pipeline generates several output files:
-- `results/{asset}_{model}_results.csv`: Backtest results for each asset and model
-- `results/{asset}_shap_values.csv`: SHAP values for feature importance
-- `results/performance_metrics.csv`: Summary performance metrics
+```python
+# Import CLI commands directly
+from cli.commands.get_signals import GetSignalsCommand
 
-## Dependencies
+# Generate signals programmatically
+command = GetSignalsCommand()
+signals = command.execute(assets=['EURUSD', 'GBPUSD'], models=['xgboost'])
+print(signals)
+```
 
-- Python 3.8+
-- See `requirements.txt` for full list of dependencies
+### REST API Wrapper
 
-## Extending the Framework
+```python
+# Example FastAPI wrapper (not included, for reference)
+from fastapi import FastAPI
+import subprocess
+import json
 
-The pipeline is designed to be modular and extensible. Here are some ways to extend it:
+app = FastAPI()
 
-1. **Add New Assets**
-   - Add new tickers to the `assets` dictionary in `MarketProcessor`
-   - Adjust transaction costs in `main.py` if needed
-   - The pipeline will automatically handle the new assets
+@app.get("/signals/{asset}")
+async def get_signals(asset: str):
+    result = subprocess.run([
+        'python', 'cli/main.py', 'get-signals',
+        '--assets', asset, '--output-file', 'temp_signals.json'
+    ], capture_output=True)
 
-2. **Customize Feature Engineering**
-   - Add new market features in `MarketProcessor.compute_market_features()`
-   - Add new sentiment features in `SentimentAnalyzer.compute_daily_features()`
-   - The feature alignment process will automatically include new features
+    with open('temp_signals.json') as f:
+        return json.load(f)
+```
 
-3. **Add New Models**
-   - Add new model classes to `ModelTrainer.models`
-   - Implement required methods (fit, predict_proba)
-   - The backtesting framework will automatically include new models
+## Development & Contributing
 
-4. **Modify Backtest Parameters**
-   - Adjust fold duration in `ModelTrainer.backtest()`
-   - Change transaction costs in `main.py`
-   - Modify performance metrics in `ModelTrainer.compute_metrics()`
+### Running Tests
 
-5. **Integrate with Production Systems**
-   - Add database integration for storing results
-   - Implement real-time data feeds
-   - Add API endpoints for model predictions
+```bash
+# Basic system test
+python cli/main.py status
+
+# Test signal generation
+python cli/main.py get-signals --assets EURUSD
+
+# Test data pipeline
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-01-05 --skip-training
+```
+
+### Code Organization
+
+```
+cli/                    # Command-line interface
+├── main.py            # CLI entry point
+├── commands/          # Individual command implementations
+└── config.py          # Configuration management
+
+src/                   # Core pipeline modules
+├── model_trainer.py   # ML model training
+├── sentiment_analyzer.py  # FinBERT sentiment analysis
+├── market_processor.py    # Market data processing
+└── data_collector.py      # Unified data collection
+```
 
 ## License
 
@@ -164,14 +746,61 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- GDELT Project for providing the news data API
-- ProsusAI for developing and open-sourcing the FinBERT model
-- HuggingFace for maintaining the transformers library
-- Yahoo Finance for market data access
-- The open-source community for the various Python packages used in this project
+- **GDELT Project**: Global news event database and API access
+- **ProsusAI**: FinBERT financial sentiment model
+- **HuggingFace**: Transformers library and model hosting
+- **Yahoo Finance**: Market data API
+- **Academic Community**: Research foundation from arXiv:2505.16136v1
 
-## Reference
+## References
 
-This implementation is based on the research paper: [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1)
+### Primary Research
+This implementation is based on: [arXiv:2505.16136v1](https://arxiv.org/abs/2505.16136v1)
 
+### Additional Resources
+- **GDELT Documentation**: [https://www.gdeltproject.org/data.html](https://www.gdeltproject.org/data.html)
+- **FinBERT Paper**: "FinBERT: Financial Sentiment Analysis with Pre-trained Language Models"
+- **SHAP Documentation**: [https://shap.readthedocs.io/](https://shap.readthedocs.io/)
 
+---
+
+## Quick Reference Card
+
+### Most Common Commands
+
+```bash
+# Check system status
+python cli/main.py status
+
+# Get current signals
+python cli/main.py get-signals
+
+# Quick test run (5 minutes)
+python cli/main.py run-pipeline --start-date 2024-01-01 --end-date 2024-01-31 --assets EURUSD --skip-training
+
+# Production analysis (45 minutes)
+python cli/main.py run-pipeline --start-date 2023-01-01 --end-date 2023-12-31
+
+# Generate visualizations
+python cli/main.py visualize --results-path results/ --types performance
+
+# Multi-timeframe analysis (1D, 1W, 1M, 1Y)
+python cli/main.py multi-timeframe-signals --assets EURUSD GBPUSD --timeframes 1D 1W 1M 1Y
+
+# High-confidence signals only
+python cli/main.py multi-timeframe-signals --assets EURUSD --confidence-threshold 0.7
+
+# Save multi-timeframe signals to file
+python cli/main.py multi-timeframe-signals --assets EURUSD GBPUSD --output-file signals/multi_tf.json
+```
+
+### Essential File Locations
+
+- **Configuration**: `.env`, `cli/config.yaml`
+- **Results**: `results/` directory
+- **Logs**: `logs/cli.log`
+- **Models**: `results/models/`
+- **Signals**: `signals/` directory
+- **Troubleshooting**: `CLAUDE.md`
+
+For detailed troubleshooting and advanced usage, see `CLAUDE.md` and `TRADING_QUICKSTART.md`.

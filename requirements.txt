@@ -1,17 +1,55 @@
+# Macro Sentiment Trading - Core Dependencies
+# Use requirements-pinned.txt for production deployments
+
+# Core Data Processing
 pandas>=1.5.0
 numpy>=1.21.0
-requests>=2.28.0
-beautifulsoup4>=4.11.0
-transformers>=4.30.0
-torch>=2.0.0
-xgboost>=1.7.0
-scikit-learn>=1.0.0
-yfinance>=0.2.0
+pyarrow>=14.0.0
+
+# Machine Learning
+scikit-learn>=1.1.0
+xgboost>=1.6.0
 shap>=0.41.0
-python-dotenv>=1.0.0
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
-tqdm>=4.65.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
+imbalanced-learn>=0.11.0
+optuna>=3.4.0
+
+# Deep Learning & NLP
+torch>=1.9.0
+transformers>=4.20.0
+
+# Financial Data
+yfinance>=0.1.70
 gdelt>=0.1.14
+
+# Web Scraping & HTTP
+requests>=2.25.0
+beautifulsoup4>=4.10.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Google Cloud (Optional - for BigQuery data access)
+google-cloud-bigquery>=3.0.0
+google-cloud-bigquery-storage>=2.0.0
+db-dtypes>=1.0.0
+
+# Monitoring (Optional - for BigQuery performance monitoring)
+opentelemetry-api>=1.15.0
+opentelemetry-instrumentation>=0.36b0
+
+# Utilities
+python-dotenv>=0.19.0
+tqdm>=4.60.0
+schedule>=1.2.0
+
+# Optional API Libraries for Enhanced LLM Sentiment Analysis
+# Uncomment the lines below if you have API keys:
+# openai>=1.0.0        # For GPT-3.5/GPT-4 sentiment analysis
+# anthropic>=0.3.0     # For Claude 3 sentiment analysis
+
+# Development Tools (install separately for development)
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950

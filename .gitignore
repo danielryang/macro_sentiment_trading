@@ -1,5 +1,8 @@
 # Python virtual environment
 venv/
+.venv/
+env/
+ENV/
 
 # maturin and Rust build artifacts
 rust_trade_sim/target/
@@ -12,11 +15,76 @@ rust_trade_sim/target/
 __pycache__/
 *.pyc
 *.pyo
+*.pyi.bak
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Wheels and build outputs
 dist/
 build/
 *.whl
+*.egg-info/
 
 # Rust package lock file
 Cargo.lock 
+
+# Credentials and environment files
+macro-sentiment-trading-*.json
+*.json.key
+*credentials*.json
+.env
+.env.*
+!.env.example
+
+# BigQuery credentials
+macro-sentiment-trading-02d62df7e52d.json
+
+# Data directories (large files)
+data/
+logs/
+signals/
+forecasts/
+
+# Results directory (except models which use Git LFS)
+results/**/*.csv
+results/**/*.parquet
+results/**/*.pkl
+!results/models/*.pkl
+
+# Notebook outputs
+notebooks/data/
+notebooks/results/
+notebooks/**/*.csv
+notebooks/**/*.pkl
+notebooks/**/*.parquet
+notebooks/**/*.json
+
+# Cache files
+*.parquet
+*.pkl.bak
+cache/
+.cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Test outputs (keep test_visualizations for demo)
+test_results/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+!logs/.gitkeep
