@@ -79,8 +79,15 @@ class ModelTrainer:
             X, y, feature_cols, scaler
         """
         feature_cols = [col for col in data.columns if col not in ['date', 'returns', 'target', 'Open', 'High', 'Low', 'Close', 'Volume', 'index']]
-        X = data[feature_cols].values
+        X = data[feature_cols].copy()
+        
+        # Handle NaN values by forward fill, then backward fill, then fill with 0
+        X = X.ffill().bfill().fillna(0)
+        
+        # Convert to numpy array
+        X = X.values
         y = data['target'].values
+        
         if scaler is None:
             scaler = StandardScaler()
         if fit_scaler:
@@ -89,10 +96,10 @@ class ModelTrainer:
             X_scaled = scaler.transform(X)
         return X_scaled, y, feature_cols, scaler
         
-    def train_models(self, data: pd.DataFrame) -> Dict[str, object]:
+    def train_models(self, data: pd.DataFrame) -> Tuple[Dict[str, object], Dict[str, object], List[str]]:
         """
         Train both logistic regression and XGBoost models using only training data for scaling.
-        Returns dict of trained models and scalers.
+        Returns dict of trained models, scalers, and feature columns.
         """
         X, y, feature_cols, scaler = self.prepare_features(data, fit_scaler=True)
         trained_models = {}
@@ -104,7 +111,7 @@ class ModelTrainer:
             else:
                 model.fit(X, y)
             trained_models[name] = model
-        return trained_models, trained_scalers
+        return trained_models, trained_scalers, feature_cols
         
     def generate_signals(self, model: object, data: pd.DataFrame, scaler=None) -> pd.Series:
         """
