@@ -70,7 +70,7 @@ class ModelTrainer:
         
     def prepare_features(self, data: pd.DataFrame, scaler=None, fit_scaler=True):
         """
-        Prepare features and target for training. Standardize features for logistic regression using only training data stats.
+        Prepare features and target for training. Uses ALL available features except metadata.
         Args:
             data: DataFrame with features and target
             scaler: Optional StandardScaler instance
@@ -78,7 +78,21 @@ class ModelTrainer:
         Returns:
             X, y, feature_cols, scaler
         """
-        feature_cols = [col for col in data.columns if col not in ['date', 'returns', 'target', 'Open', 'High', 'Low', 'Close', 'Volume', 'index']]
+        # Exclude only metadata columns - USE ALL OTHER FEATURES (577+)
+        exclude_keywords = ['date', 'Date', 'returns', 'target', 'index', 'target_return']
+
+        # Also exclude asset-specific OHLCV columns (they have asset names in them)
+        feature_cols = []
+        for col in data.columns:
+            # Skip if column is in exclude list
+            if col in exclude_keywords:
+                continue
+            # Skip if column contains OHLCV keywords with = (like Close_EURUSD=X)
+            if any(kw in col for kw in ['Open_', 'High_', 'Low_', 'Close_', 'Volume_']) and '=' in col:
+                continue
+            # Otherwise, it's a feature - include it!
+            feature_cols.append(col)
+
         X = data[feature_cols].copy()
         
         # Handle NaN values by forward fill, then backward fill, then fill with 0
@@ -87,13 +101,23 @@ class ModelTrainer:
         # Convert to numpy array
         X = X.values
         y = data['target'].values
-        
+
+        # Handle scaling based on scaler and fit_scaler parameters
         if scaler is None:
-            scaler = StandardScaler()
-        if fit_scaler:
-            X_scaled = scaler.fit_transform(X)
+            if fit_scaler:
+                # Create new scaler and fit
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(X)
+            else:
+                # No scaler provided and not fitting - return unscaled features
+                X_scaled = X
         else:
-            X_scaled = scaler.transform(X)
+            # Scaler provided
+            if fit_scaler:
+                X_scaled = scaler.fit_transform(X)
+            else:
+                X_scaled = scaler.transform(X)
+
         return X_scaled, y, feature_cols, scaler
         
     def train_models(self, data: pd.DataFrame) -> Tuple[Dict[str, object], Dict[str, object], List[str]]:
@@ -148,12 +172,39 @@ class ModelTrainer:
             strategy_returns = strategy_returns - position_changes * transaction_cost
             return strategy_returns
         
-    def backtest(self, data: pd.DataFrame, transaction_cost: float) -> Dict[str, pd.DataFrame]:
+    def backtest(self, data: pd.DataFrame, transaction_cost: float, asset_name: str = None, save_results: bool = True) -> Dict[str, pd.DataFrame]:
         """
         Perform backtest using expanding window approach, strictly as in the research.
         """
-        start_date = data['date'].min()
-        end_date = data['date'].max()
+        # Handle date as either index or column
+        # Priority: 1) date/Date column, 2) date index, 3) any datetime column
+        date_series = None
+
+        # Check for date column (case-insensitive)
+        for col in ['date', 'Date', 'DATE']:
+            if col in data.columns:
+                # Check if it's actually valid (not all NaT)
+                if not data[col].isna().all():
+                    date_series = data[col]
+                    break
+
+        # If no valid column, try index
+        if date_series is None and data.index.name == 'date':
+            if not pd.isna(data.index).all():
+                date_series = data.index
+
+        # Last resort: find any datetime column
+        if date_series is None:
+            for col in data.columns:
+                if pd.api.types.is_datetime64_any_dtype(data[col]) and not data[col].isna().all():
+                    date_series = data[col]
+                    break
+
+        if date_series is None:
+            raise ValueError("No valid date column or index found in data")
+
+        start_date = date_series.min()
+        end_date = date_series.max()
         fold_duration = timedelta(days=365 * 2)
         results = {}
         for model_name in self.models.keys():
@@ -163,16 +214,55 @@ class ModelTrainer:
             while current_start + fold_duration < end_date:
                 train_end = current_start + fold_duration
                 test_end = min(train_end + timedelta(days=365), end_date)
-                train_data = data[(data['date'] >= current_start) & (data['date'] < train_end)]
-                test_data = data[(data['date'] >= train_end) & (data['date'] < test_end)]
+
+                # Filter by date (determine which column/index to use)
+                # Use the same date_series we identified earlier
+                if isinstance(date_series, pd.Series):
+                    # It's a column - find its name
+                    date_col_name = None
+                    for col in ['date', 'Date', 'DATE']:
+                        if col in data.columns and data[col].equals(date_series):
+                            date_col_name = col
+                            break
+                    if date_col_name:
+                        train_data = data[(data[date_col_name] >= current_start) & (data[date_col_name] < train_end)]
+                        test_data = data[(data[date_col_name] >= train_end) & (data[date_col_name] < test_end)]
+                    else:
+                        # Fallback: use date_series directly by index matching
+                        train_mask = (date_series >= current_start) & (date_series < train_end)
+                        test_mask = (date_series >= train_end) & (date_series < test_end)
+                        train_data = data[train_mask]
+                        test_data = data[test_mask]
+                else:
+                    # It's an index
+                    train_data = data[(data.index >= current_start) & (data.index < train_end)]
+                    test_data = data[(data.index >= train_end) & (data.index < test_end)]
+
                 if len(train_data) > 0 and len(test_data) > 0:
                     trained_models, trained_scalers = self.train_models(train_data)
                     model = trained_models[model_name]
                     scaler = trained_scalers.get(model_name, None)
                     signals = self.generate_signals(model, test_data, scaler=scaler)
                     returns = self.compute_returns(signals, test_data, transaction_cost)
+
+                    # Get date series for results - use same logic as above
+                    if isinstance(date_series, pd.Series):
+                        # Find the date column name
+                        date_col_name = None
+                        for col in ['date', 'Date', 'DATE']:
+                            if col in test_data.columns:
+                                date_col_name = col
+                                break
+                        if date_col_name:
+                            result_dates = test_data[date_col_name]
+                        else:
+                            # Use index positions to extract from date_series
+                            result_dates = date_series[test_data.index]
+                    else:
+                        result_dates = test_data.index
+
                     fold_results.append(pd.DataFrame({
-                        'date': test_data['date'],
+                        'date': result_dates,
                         'returns': returns,
                         'cumulative_returns': (1 + returns).cumprod(),
                         'signals': signals,

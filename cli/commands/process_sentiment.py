@@ -150,30 +150,55 @@ class ProcessSentimentCommand(BaseCommand):
         
         # Add additional features
         daily_sentiment['log_volume'] = np.log1p(daily_sentiment['news_volume'])
-        
+
+        # Add article_impact feature (from research paper: S_t * log(1 + V_t))
+        daily_sentiment['article_impact'] = daily_sentiment['mean_sentiment'] * daily_sentiment['log_volume']
+
         # Add additional features based on available hybrid data
-        # Use the hybrid data columns that are available
-        additional_cols = {}
+        # Create BOTH simple goldstein features (for model compatibility)
+        # AND aggregated features (for richer representation)
+        simple_goldstein_cols = {}
+        aggregated_cols = {}
+
         if 'goldstein_mean' in events_df.columns:
-            additional_cols['goldstein_mean'] = ['mean', 'std']
+            # Simple goldstein_mean (average of per-event goldstein means)
+            simple_goldstein_cols['goldstein_mean'] = 'mean'
+            # Aggregated goldstein statistics (for advanced features)
+            aggregated_cols['goldstein_mean'] = ['mean', 'std']
         if 'goldstein_std' in events_df.columns:
-            additional_cols['goldstein_std'] = ['mean', 'std']
+            # Simple goldstein_std (average of per-event goldstein stds)
+            simple_goldstein_cols['goldstein_std'] = 'mean'
+            # Aggregated goldstein statistics (for advanced features)
+            aggregated_cols['goldstein_std'] = ['mean', 'std']
         if 'num_articles' in events_df.columns:
-            additional_cols['num_articles'] = 'sum'
+            aggregated_cols['num_articles'] = 'sum'
         if 'tone' in events_df.columns:
-            additional_cols['tone'] = ['mean', 'std']
-        
-        if additional_cols:
+            aggregated_cols['tone'] = ['mean', 'std']
+
+        if simple_goldstein_cols or aggregated_cols:
             # Convert to numeric first
-            for col in additional_cols.keys():
-                events_df[col] = pd.to_numeric(events_df[col], errors='coerce')
-            
-            daily_additional = events_df.groupby('date').agg(additional_cols).reset_index()
-            
-            # Flatten column names
-            daily_additional.columns = ['date'] + [f"{col}_{stat}" if isinstance(stat, str) else f"{col}_{stat[0]}" 
-                                                for col, stat in additional_cols.items() 
-                                                for stat in (stat if isinstance(stat, list) else [stat])]
+            for col in list(simple_goldstein_cols.keys()) + list(aggregated_cols.keys()):
+                if col in events_df.columns:
+                    events_df[col] = pd.to_numeric(events_df[col], errors='coerce')
+
+            # Create simple goldstein features (model compatibility)
+            if simple_goldstein_cols:
+                daily_simple = events_df.groupby('date').agg(simple_goldstein_cols).reset_index()
+            else:
+                daily_simple = pd.DataFrame({'date': events_df.groupby('date').size().index})
+
+            # Create aggregated features (rich representation)
+            if aggregated_cols:
+                daily_aggregated = events_df.groupby('date').agg(aggregated_cols).reset_index()
+                # Flatten column names for aggregated features
+                daily_aggregated.columns = ['date'] + [f"{col}_{stat}" if isinstance(stat, str) else f"{col}_{stat[0]}"
+                                                     for col, stat in aggregated_cols.items()
+                                                     for stat in (stat if isinstance(stat, list) else [stat])]
+            else:
+                daily_aggregated = pd.DataFrame({'date': events_df.groupby('date').size().index})
+
+            # Merge simple and aggregated features
+            daily_additional = daily_simple.merge(daily_aggregated, on='date', how='outer')
         else:
             # Create default values if no additional columns
             daily_additional = events_df.groupby('date').size().reset_index(name='count')
@@ -187,27 +212,33 @@ class ProcessSentimentCommand(BaseCommand):
         # Add time-based features
         daily_features = daily_features.sort_values('date').reset_index(drop=True)
         
-        # Lagged features
-        for lag in [1, 2, 3]:
-            daily_features[f'mean_sentiment_lag_{lag}'] = daily_features['mean_sentiment'].shift(lag)
-            # Only add lagged features for columns that exist
-            if 'goldstein_mean' in daily_features.columns:
-                daily_features[f'goldstein_mean_lag_{lag}'] = daily_features['goldstein_mean'].shift(lag)
-            if 'goldstein_std' in daily_features.columns:
-                daily_features[f'goldstein_std_lag_{lag}'] = daily_features['goldstein_std'].shift(lag)
-        
-        # Moving averages
-        daily_features['mean_sentiment_ma_5d'] = daily_features['mean_sentiment'].rolling(5).mean()
-        daily_features['mean_sentiment_ma_20d'] = daily_features['mean_sentiment'].rolling(20).mean()
-        
-        # Acceleration
+        # Comprehensive lagged features (lags 1,2,3,5 for ALL key features)
+        lag_features = ['mean_sentiment', 'sentiment_std', 'news_volume', 'log_volume',
+                       'article_impact', 'goldstein_mean', 'goldstein_std']
+
+        for feature in lag_features:
+            if feature in daily_features.columns:
+                for lag in [1, 2, 3, 5]:
+                    daily_features[f'{feature}_lag_{lag}'] = daily_features[feature].shift(lag)
+
+        # Comprehensive moving averages (5d, 20d for key features)
+        ma_features = ['mean_sentiment', 'article_impact', 'goldstein_mean', 'goldstein_std']
+        for feature in ma_features:
+            if feature in daily_features.columns:
+                daily_features[f'{feature}_ma_5d'] = daily_features[feature].rolling(5).mean()
+                daily_features[f'{feature}_ma_20d'] = daily_features[feature].rolling(20).mean()
+
+        # Comprehensive rolling std devs (5d, 10d for key features)
+        std_features = ['mean_sentiment', 'article_impact', 'goldstein_mean', 'goldstein_std']
+        for feature in std_features:
+            if feature in daily_features.columns:
+                daily_features[f'{feature}_std_5d'] = daily_features[feature].rolling(5).std()
+                daily_features[f'{feature}_std_10d'] = daily_features[feature].rolling(10).std()
+
+        # Acceleration (second derivative of sentiment)
         daily_features['sentiment_acceleration'] = daily_features['mean_sentiment'].diff().diff()
-        
-        # Volatility features
-        daily_features['mean_sentiment_std_5d'] = daily_features['mean_sentiment'].rolling(5).std()
-        daily_features['mean_sentiment_std_10d'] = daily_features['mean_sentiment'].rolling(10).std()
-        
-        # Volume features
+
+        # Volume rolling sums
         daily_features['news_volume_sum_5d'] = daily_features['news_volume'].rolling(5).sum()
         daily_features['news_volume_sum_10d'] = daily_features['news_volume'].rolling(10).sum()
         

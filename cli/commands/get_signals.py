@@ -591,9 +591,31 @@ class GetSignalsCommand(BaseCommand):
                 # Generate signal using the model_trainer approach
                 from src.model_trainer import ModelTrainer
                 trainer = ModelTrainer()
-                
+
+                # Filter data to only include features the model was trained on
+                if feature_columns:
+                    # Only keep columns that exist in both the data and feature_columns
+                    available_features = [col for col in feature_columns if col in latest_row.columns]
+                    if len(available_features) != len(feature_columns):
+                        missing = set(feature_columns) - set(available_features)
+                        self.logger.warning(f"{asset} {model_name}: Missing {len(missing)} features: {list(missing)[:5]}")
+
+                    # Create filtered row with training features
+                    filtered_row = latest_row[available_features].copy()
+
+                    # Add back metadata columns that prepare_features needs (target, returns, etc.)
+                    # These will be filtered out by prepare_features anyway
+                    for meta_col in ['target', 'returns', 'date', 'Date', 'index']:
+                        if meta_col in latest_row.columns and meta_col not in filtered_row.columns:
+                            filtered_row[meta_col] = latest_row[meta_col]
+                else:
+                    filtered_row = latest_row
+
+                # Only use scaler for logistic regression, not for XGBoost
+                use_scaler = scaler if 'logistic' in model_name.lower() else None
+
                 signals_series = trainer.generate_signals(
-                    model, latest_row, scaler=scaler, feature_columns=feature_columns
+                    model, filtered_row, scaler=use_scaler
                 )
                 
                 if not signals_series.empty:

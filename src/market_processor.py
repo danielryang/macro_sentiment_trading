@@ -67,13 +67,43 @@ class MarketProcessor:
     def compute_market_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Compute additional market features strictly as described in the research.
-        Includes lagged returns and volatility, and ensures no look-ahead bias.
+        Includes lagged returns, volatility, and technical indicators.
         """
         df = data.copy()
+
         # Lagged returns (1 day)
         df['return_lag_1'] = df['returns'].shift(1)
-        # 20-day rolling volatility (already computed as vol20)
-        # All features use only info up to and including day t
+
+        # Technical indicators using TA-Lib if available, otherwise manual calculation
+        try:
+            import talib
+            # Find Close column (may have asset suffix like Close_EURUSD=X)
+            close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
+            if close_col:
+                close = df[close_col[0]]
+                df['rsi14'] = talib.RSI(close, timeperiod=14)
+                df['sma20'] = talib.SMA(close, timeperiod=20)
+                df['sma50'] = talib.SMA(close, timeperiod=50)
+                # Trend strength: difference between SMA20 and SMA50
+                df['trend_strength'] = (df['sma20'] - df['sma50']) / df['sma50']
+        except (ImportError, Exception) as e:
+            # Fallback to manual calculation if TA-Lib not available
+            logger.warning(f"TA-Lib not available, using manual indicators: {e}")
+            close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
+            if close_col:
+                close = df[close_col[0]]
+                # Simple RSI calculation
+                delta = close.diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                df['rsi14'] = 100 - (100 / (1 + rs))
+                # Simple moving averages
+                df['sma20'] = close.rolling(20).mean()
+                df['sma50'] = close.rolling(50).mean()
+                # Trend strength
+                df['trend_strength'] = (df['sma20'] - df['sma50']) / df['sma50']
+
         # Don't dropna here - let alignment function handle NaN removal
         return df
         
