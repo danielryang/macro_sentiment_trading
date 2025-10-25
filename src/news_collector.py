@@ -34,7 +34,7 @@ from gdelt import gdelt
 import warnings
 from bs4 import GuessedAtParserWarning, XMLParsedAsHTMLWarning
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.headline_util import fetch_headline
+from src.utils.headline_util import fetch_headline
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)

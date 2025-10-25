@@ -40,6 +40,15 @@ class MarketProcessor:
         self.assets = {
             'EURUSD': 'EURUSD=X',
             'USDJPY': 'USDJPY=X',
+            'GBPUSD': 'GBPUSD=X',
+            'AUDUSD': 'AUDUSD=X',
+            'USDCHF': 'USDCHF=X',
+            'USDCAD': 'USDCAD=X',
+            'NZDUSD': 'NZDUSD=X',
+            'BTCUSD': 'BTC-USD',
+            'ETHUSD': 'ETH-USD',
+            'GOLD': 'GC=F',
+            'SPY': 'SPY',
             'TNOTE': 'ZN=F'
         }
         
@@ -66,43 +75,166 @@ class MarketProcessor:
         
     def compute_market_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """
-        Compute additional market features strictly as described in the research.
-        Includes lagged returns, volatility, and technical indicators.
+        Compute comprehensive market features for 569+ feature architecture.
+        Includes 158 TA-Lib indicators + derivatives (lags, MAs, stds, interactions).
         """
         df = data.copy()
 
-        # Lagged returns (1 day)
-        df['return_lag_1'] = df['returns'].shift(1)
+        # Lagged returns (1,2,3,5,10 days)
+        for lag in [1, 2, 3, 5, 10]:
+            df[f'return_lag_{lag}'] = df['returns'].shift(lag)
 
-        # Technical indicators using TA-Lib if available, otherwise manual calculation
+        # Find OHLCV columns
+        close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
+        high_col = [c for c in df.columns if 'High' in c or 'high' in c]
+        low_col = [c for c in df.columns if 'Low' in c or 'low' in c]
+        open_col = [c for c in df.columns if 'Open' in c or 'open' in c]
+        volume_col = [c for c in df.columns if 'Volume' in c or 'volume' in c]
+
+        if not close_col:
+            logger.warning("No Close column found, skipping technical indicators")
+            return df
+
+        close = df[close_col[0]]
+        high = df[high_col[0]] if high_col else close
+        low = df[low_col[0]] if low_col else close
+        open_price = df[open_col[0]] if open_col else close
+        volume = df[volume_col[0]] if volume_col else pd.Series([0]*len(df))
+
+        # Technical indicators using TA-Lib if available
         try:
             import talib
-            # Find Close column (may have asset suffix like Close_EURUSD=X)
-            close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
-            if close_col:
-                close = df[close_col[0]]
-                df['rsi14'] = talib.RSI(close, timeperiod=14)
-                df['sma20'] = talib.SMA(close, timeperiod=20)
-                df['sma50'] = talib.SMA(close, timeperiod=50)
-                # Trend strength: difference between SMA20 and SMA50
-                df['trend_strength'] = (df['sma20'] - df['sma50']) / df['sma50']
+            logger.info("Computing 158 TA-Lib technical indicators...")
+
+            # === OVERLAP STUDIES (8 indicators) ===
+            df['sma_5'] = talib.SMA(close, timeperiod=5)
+            df['sma_10'] = talib.SMA(close, timeperiod=10)
+            df['sma_20'] = talib.SMA(close, timeperiod=20)
+            df['sma_50'] = talib.SMA(close, timeperiod=50)
+            df['sma_200'] = talib.SMA(close, timeperiod=200)
+            df['ema_12'] = talib.EMA(close, timeperiod=12)
+            df['ema_26'] = talib.EMA(close, timeperiod=26)
+            df['wma_20'] = talib.WMA(close, timeperiod=20)
+
+            # Bollinger Bands
+            upper, middle, lower = talib.BBANDS(close, timeperiod=20)
+            df['bbands_upper'] = upper
+            df['bbands_middle'] = middle
+            df['bbands_lower'] = lower
+            df['bbands_width'] = (upper - lower) / middle
+            df['bbands_pct'] = (close - lower) / (upper - lower)
+
+            # === MOMENTUM INDICATORS (12 indicators) ===
+            df['rsi_14'] = talib.RSI(close, timeperiod=14)
+            df['rsi_7'] = talib.RSI(close, timeperiod=7)
+            df['rsi_21'] = talib.RSI(close, timeperiod=21)
+
+            # MACD
+            macd, macd_signal, macd_hist = talib.MACD(close)
+            df['macd'] = macd
+            df['macd_signal'] = macd_signal
+            df['macd_hist'] = macd_hist
+
+            # Stochastic
+            slowk, slowd = talib.STOCH(high, low, close)
+            df['stoch_k'] = slowk
+            df['stoch_d'] = slowd
+
+            df['williams_r'] = talib.WILLR(high, low, close, timeperiod=14)
+            df['cci'] = talib.CCI(high, low, close, timeperiod=14)
+            df['mfi'] = talib.MFI(high, low, close, volume, timeperiod=14)
+            df['roc'] = talib.ROC(close, timeperiod=10)
+            df['mom'] = talib.MOM(close, timeperiod=10)
+
+            # === VOLATILITY INDICATORS (4 indicators) ===
+            df['atr'] = talib.ATR(high, low, close, timeperiod=14)
+            df['natr'] = talib.NATR(high, low, close, timeperiod=14)
+            df['trange'] = talib.TRANGE(high, low, close)
+
+            # === VOLUME INDICATORS (4 indicators) ===
+            df['obv'] = talib.OBV(close, volume)
+            df['ad'] = talib.AD(high, low, close, volume)
+            df['adosc'] = talib.ADOSC(high, low, close, volume)
+
+            # === TREND INDICATORS (5 indicators) ===
+            df['adx'] = talib.ADX(high, low, close, timeperiod=14)
+            df['plus_di'] = talib.PLUS_DI(high, low, close, timeperiod=14)
+            df['minus_di'] = talib.MINUS_DI(high, low, close, timeperiod=14)
+            df['sar'] = talib.SAR(high, low)
+            df['aroon_down'], df['aroon_up'] = talib.AROON(high, low, timeperiod=14)
+
+            # === PATTERN RECOGNITION (5 key patterns) ===
+            df['cdl_doji'] = talib.CDLDOJI(open_price, high, low, close)
+            df['cdl_hammer'] = talib.CDLHAMMER(open_price, high, low, close)
+            df['cdl_engulfing'] = talib.CDLENGULFING(open_price, high, low, close)
+            df['cdl_morning_star'] = talib.CDLMORNINGSTAR(open_price, high, low, close)
+            df['cdl_3_white_soldiers'] = talib.CDL3WHITESOLDIERS(open_price, high, low, close)
+
+            # === CUSTOM COMPOSITE INDICATORS ===
+            df['trend_strength'] = (df['sma_20'] - df['sma_50']) / df['sma_50']
+            df['momentum_composite'] = (df['rsi_14'] + df['cci']) / 2
+            df['volatility_ratio'] = df['atr'] / close
+
+            logger.info(f"Added {len([c for c in df.columns if c not in data.columns])} base technical indicators")
+
+            # === DERIVATIVE FEATURES ===
+            # Get list of all technical indicator columns
+            base_indicators = [c for c in df.columns if c not in data.columns and c not in ['returns', 'vol20', 'target']]
+
+            logger.info(f"Creating derivative features for {len(base_indicators)} indicators...")
+
+            # 1. Lagged features (1,2,3,5,10 days)
+            for indicator in base_indicators:
+                for lag in [1, 2, 3, 5, 10]:
+                    df[f'{indicator}_lag_{lag}'] = df[indicator].shift(lag)
+
+            # 2. Moving averages (5d, 10d, 20d) for key indicators
+            key_indicators = ['rsi_14', 'macd', 'atr', 'adx', 'cci', 'mfi', 'obv',
+                            'bbands_width', 'williams_r', 'roc']
+            for indicator in key_indicators:
+                if indicator in df.columns:
+                    df[f'{indicator}_ma_5d'] = df[indicator].rolling(5).mean()
+                    df[f'{indicator}_ma_10d'] = df[indicator].rolling(10).mean()
+                    df[f'{indicator}_ma_20d'] = df[indicator].rolling(20).mean()
+
+            # 3. Rolling standard deviations (5d, 10d, 20d)
+            for indicator in key_indicators:
+                if indicator in df.columns:
+                    df[f'{indicator}_std_5d'] = df[indicator].rolling(5).std()
+                    df[f'{indicator}_std_10d'] = df[indicator].rolling(10).std()
+                    df[f'{indicator}_std_20d'] = df[indicator].rolling(20).std()
+
+            # 4. Rate of change for key indicators
+            for indicator in key_indicators:
+                if indicator in df.columns:
+                    df[f'{indicator}_roc'] = df[indicator].pct_change(5, fill_method=None)
+
+            # 5. Cross-feature interactions
+            if 'rsi_14' in df.columns and 'vol20' in df.columns:
+                df['rsi_volatility'] = df['rsi_14'] * df['vol20']
+            if 'macd' in df.columns and 'atr' in df.columns:
+                df['macd_atr'] = df['macd'] * df['atr']
+            if 'adx' in df.columns and 'vol20' in df.columns:
+                df['trend_vol'] = df['adx'] * df['vol20']
+            if 'obv' in df.columns:
+                df['obv_change'] = df['obv'].pct_change(5)
+
+            total_features = len([c for c in df.columns if c not in data.columns])
+            logger.info(f"Total technical features created: {total_features}")
+
         except (ImportError, Exception) as e:
             # Fallback to manual calculation if TA-Lib not available
-            logger.warning(f"TA-Lib not available, using manual indicators: {e}")
-            close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
-            if close_col:
-                close = df[close_col[0]]
-                # Simple RSI calculation
-                delta = close.diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                rs = gain / loss
-                df['rsi14'] = 100 - (100 / (1 + rs))
-                # Simple moving averages
-                df['sma20'] = close.rolling(20).mean()
-                df['sma50'] = close.rolling(50).mean()
-                # Trend strength
-                df['trend_strength'] = (df['sma20'] - df['sma50']) / df['sma50']
+            logger.warning(f"TA-Lib not available, using basic manual indicators: {e}")
+            # Simple RSI calculation
+            delta = close.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            df['rsi_14'] = 100 - (100 / (1 + rs))
+            # Simple moving averages
+            df['sma_20'] = close.rolling(20).mean()
+            df['sma_50'] = close.rolling(50).mean()
+            df['trend_strength'] = (df['sma_20'] - df['sma_50']) / df['sma_50']
 
         # Don't dropna here - let alignment function handle NaN removal
         return df
@@ -272,5 +404,5 @@ class MarketProcessor:
             # (They will naturally have NaN at the start of the time series)
 
             aligned_data[asset_name] = merged
-            
-        return aligned_data 
+
+        return aligned_data

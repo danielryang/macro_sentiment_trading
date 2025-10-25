@@ -438,4 +438,3 @@ class MultiTimeframeBacktester:
                 except Exception as e:
                     self.logger.error(f"Error generating signal for {timeframe} {model_name}: {e}")
         
-        return signals

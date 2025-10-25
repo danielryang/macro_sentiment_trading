@@ -97,7 +97,7 @@ class SentimentAnalyzer:
         """
         Compute daily sentiment features strictly following the research math.
         Args:
-            sentiment_df: DataFrame with columns ['date', 'polarity', 'goldstein']
+            sentiment_df: DataFrame with columns ['date', 'polarity', 'goldstein'] or ['date', 'polarity', 'goldstein_mean', 'goldstein_std']
         Returns:
             DataFrame with daily features and all required lags, MAs, rolling stds, and sums.
         """
@@ -111,12 +111,21 @@ class SentimentAnalyzer:
             V_t = N_t
             logV_t = np.log(1 + N_t)
             AI_t = S_t * logV_t
+
+            # Handle goldstein from both BigQuery (goldstein_mean/std) and free API (goldstein)
             if 'goldstein' in group.columns:
+                # Free API: raw goldstein values per event
                 G_t = group['goldstein'].mean()
                 sigmaG_t = group['goldstein'].std(ddof=0)
+            elif 'goldstein_mean' in group.columns:
+                # BigQuery: pre-aggregated goldstein_mean/std (already computed per date)
+                # Just take the first value since all rows for this date have the same aggregated value
+                G_t = group['goldstein_mean'].iloc[0]
+                sigmaG_t = group['goldstein_std'].iloc[0] if 'goldstein_std' in group.columns else np.nan
             else:
                 G_t = np.nan
                 sigmaG_t = np.nan
+
             features.append({
                 'date': date,
                 'mean_sentiment': S_t,
@@ -150,4 +159,6 @@ class SentimentAnalyzer:
         for window in [5, 10]:
             df[f'news_volume_sum_{window}d'] = df['news_volume'].rolling(window).sum()
 
-        return df.dropna().reset_index(drop=True) 
+        # Don't drop all NaN rows - rolling features will naturally have NaN at the start
+        # Only return the dataframe (NaN handling happens during feature alignment)
+        return df 

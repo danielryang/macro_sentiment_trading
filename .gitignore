@@ -46,25 +46,11 @@ logs/
 signals/
 forecasts/
 
-# Results directory (generated files)
-results/
-!results/.gitkeep
-
-# Documentation files (keep only README.md)
-*.md
-!README.md
-
-# Claude AI files
-.claude/
-
-# Data files (generated)
-data/
-alpha_analytics_results/
-
-# Temporary files
-*.bat
-remove_emojis.py
-installed_packages.txt
+# Results directory (except models which use Git LFS)
+results/**/*.csv
+results/**/*.parquet
+results/**/*.pkl
+!results/models/*.pkl
 
 # Notebook outputs
 notebooks/data/

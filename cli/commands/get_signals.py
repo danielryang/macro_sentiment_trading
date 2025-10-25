@@ -614,8 +614,9 @@ class GetSignalsCommand(BaseCommand):
                 # Only use scaler for logistic regression, not for XGBoost
                 use_scaler = scaler if 'logistic' in model_name.lower() else None
 
+                # CRITICAL FIX: Pass feature_columns to ensure consistent feature count
                 signals_series = trainer.generate_signals(
-                    model, filtered_row, scaler=use_scaler
+                    model, filtered_row, scaler=use_scaler, feature_cols=feature_columns
                 )
                 
                 if not signals_series.empty:

@@ -87,17 +87,24 @@ class ModelTrainer:
             # Skip if column is in exclude list
             if col in exclude_keywords:
                 continue
-            # Skip if column contains OHLCV keywords with = (like Close_EURUSD=X)
-            if any(kw in col for kw in ['Open_', 'High_', 'Low_', 'Close_', 'Volume_']) and '=' in col:
+            # Skip ALL OHLCV columns (raw price/volume data should not be features)
+            # Matches: Close_EURUSD=X, Volume_SPY, Open_BTC-USD, High_ETH-USD, Close_SPY, etc.
+            if any(kw in col for kw in ['Open_', 'High_', 'Low_', 'Close_', 'Volume_']):
                 continue
             # Otherwise, it's a feature - include it!
             feature_cols.append(col)
 
         X = data[feature_cols].copy()
-        
+
         # Handle NaN values by forward fill, then backward fill, then fill with 0
         X = X.ffill().bfill().fillna(0)
-        
+
+        # Replace inf/-inf values with large but finite numbers
+        X = X.replace([np.inf, -np.inf], [1e10, -1e10])
+
+        # Clip extreme values to prevent overflow
+        X = X.clip(-1e10, 1e10)
+
         # Convert to numpy array
         X = X.values
         y = data['target'].values
@@ -137,14 +144,60 @@ class ModelTrainer:
             trained_models[name] = model
         return trained_models, trained_scalers, feature_cols
         
-    def generate_signals(self, model: object, data: pd.DataFrame, scaler=None) -> pd.Series:
+    def generate_signals(self, model: object, data: pd.DataFrame, scaler=None, feature_cols=None) -> pd.Series:
         """
         Generate trading signals from model predictions. Use scaler for logistic regression.
+        Args:
+            model: Trained model
+            data: DataFrame with features
+            scaler: Optional scaler for logistic regression
+            feature_cols: List of feature column names to use (REQUIRED for production use to ensure consistency)
         """
-        if scaler is not None:
-            X, _, _, _ = self.prepare_features(data, scaler=scaler, fit_scaler=False)
+        if feature_cols is not None:
+            # Use specified feature columns (ensures consistency with training)
+            # Validate that all required features exist in data
+            missing_features = [f for f in feature_cols if f not in data.columns]
+            if missing_features:
+                raise ValueError(
+                    f"Missing {len(missing_features)} required features in data: {missing_features[:10]}... "
+                    f"Data has {len(data.columns)} columns, expected {len(feature_cols)} features"
+                )
+
+            X = data[feature_cols].copy()
+            X = X.ffill().bfill().fillna(0)
+            X = X.replace([np.inf, -np.inf], [1e10, -1e10])
+            X = X.clip(-1e10, 1e10)
+            X = X.values
+
+            if scaler is not None:
+                X = scaler.transform(X)
+
+            # Validate feature count matches model expectations
+            if hasattr(model, 'n_features_in_'):
+                expected_features = model.n_features_in_
+                if X.shape[1] != expected_features:
+                    raise ValueError(
+                        f"Feature count mismatch! Model expects {expected_features} features, "
+                        f"but got {X.shape[1]} features.\n"
+                        f"Debug info:\n"
+                        f"  - feature_cols parameter length: {len(feature_cols)}\n"
+                        f"  - data.shape: {data.shape}\n"
+                        f"  - X.shape before scaling: {(data[feature_cols].shape if len(feature_cols) < 1000 else 'too many features')}\n"
+                        f"  - X.shape after preprocessing: {X.shape}\n"
+                        f"  - Scaler used: {scaler is not None}\n"
+                        f"This indicates inconsistent feature engineering between training and inference."
+                    )
         else:
-            X, _, _, _ = self.prepare_features(data, fit_scaler=False)
+            # Fallback to dynamic feature selection (NOT RECOMMENDED - may cause mismatches)
+            logger.warning(
+                "generate_signals called without feature_cols parameter! "
+                "This can cause feature mismatches. Please pass feature_cols explicitly."
+            )
+            if scaler is not None:
+                X, _, _, _ = self.prepare_features(data, scaler=scaler, fit_scaler=False)
+            else:
+                X, _, _, _ = self.prepare_features(data, fit_scaler=False)
+
         probas = model.predict_proba(X)[:, 1]
         return pd.Series(np.where(probas > 0.5, 1, -1), index=data.index)
         
