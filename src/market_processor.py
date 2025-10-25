@@ -37,20 +37,150 @@ logger = logging.getLogger(__name__)
 
 class MarketProcessor:
     def __init__(self):
-        self.assets = {
-            'EURUSD': 'EURUSD=X',
-            'USDJPY': 'USDJPY=X',
-            'GBPUSD': 'GBPUSD=X',
-            'AUDUSD': 'AUDUSD=X',
-            'USDCHF': 'USDCHF=X',
-            'USDCAD': 'USDCAD=X',
-            'NZDUSD': 'NZDUSD=X',
-            'BTCUSD': 'BTC-USD',
-            'ETHUSD': 'ETH-USD',
-            'GOLD': 'GC=F',
-            'SPY': 'SPY',
-            'TNOTE': 'ZN=F'
+        """
+        Initialize with comprehensive asset universe (60+ tradeable instruments).
+
+        To add new assets: Simply add to the appropriate category dictionary below.
+        Format: 'ASSET_NAME': 'YAHOO_TICKER'
+
+        To disable an asset: Comment out the line or remove from dictionary.
+        """
+
+        # ========================================================================
+        # MAJOR FX PAIRS (G10 Currencies) - 7 pairs
+        # ========================================================================
+        major_fx = {
+            'EURUSD': 'EURUSD=X',  # Euro / US Dollar
+            'USDJPY': 'USDJPY=X',  # US Dollar / Japanese Yen
+            'GBPUSD': 'GBPUSD=X',  # British Pound / US Dollar
+            'AUDUSD': 'AUDUSD=X',  # Australian Dollar / US Dollar
+            'USDCHF': 'USDCHF=X',  # US Dollar / Swiss Franc
+            'USDCAD': 'USDCAD=X',  # US Dollar / Canadian Dollar
+            'NZDUSD': 'NZDUSD=X',  # New Zealand Dollar / US Dollar
         }
+
+        # ========================================================================
+        # CROSS FX PAIRS (Non-USD) - 6 pairs
+        # ========================================================================
+        cross_fx = {
+            'EURGBP': 'EURGBP=X',  # Euro / British Pound
+            'EURJPY': 'EURJPY=X',  # Euro / Japanese Yen
+            'GBPJPY': 'GBPJPY=X',  # British Pound / Japanese Yen
+            'EURCHF': 'EURCHF=X',  # Euro / Swiss Franc
+            'AUDJPY': 'AUDJPY=X',  # Australian Dollar / Japanese Yen
+            'EURAUD': 'EURAUD=X',  # Euro / Australian Dollar
+        }
+
+        # ========================================================================
+        # EMERGING MARKET FX - 6 pairs
+        # ========================================================================
+        em_fx = {
+            'USDMXN': 'MXN=X',     # US Dollar / Mexican Peso
+            'USDBRL': 'BRL=X',     # US Dollar / Brazilian Real
+            'USDZAR': 'ZAR=X',     # US Dollar / South African Rand
+            'USDTRY': 'TRY=X',     # US Dollar / Turkish Lira
+            'USDINR': 'INR=X',     # US Dollar / Indian Rupee
+            'USDCNY': 'CNY=X',     # US Dollar / Chinese Yuan
+        }
+
+        # ========================================================================
+        # CRYPTOCURRENCIES - 10 assets
+        # ========================================================================
+        crypto = {
+            'BTCUSD': 'BTC-USD',   # Bitcoin
+            'ETHUSD': 'ETH-USD',   # Ethereum
+            'BNBUSD': 'BNB-USD',   # Binance Coin
+            'XRPUSD': 'XRP-USD',   # Ripple
+            'ADAUSD': 'ADA-USD',   # Cardano
+            'SOLUSD': 'SOL-USD',   # Solana
+            'DOTUSD': 'DOT-USD',   # Polkadot
+            'DOGEUSD': 'DOGE-USD', # Dogecoin
+            'MATICUSD': 'MATIC-USD', # Polygon
+            'LINKUSD': 'LINK-USD', # Chainlink
+        }
+
+        # ========================================================================
+        # US EQUITY INDICES (ETFs) - 10 assets
+        # ========================================================================
+        us_indices = {
+            'SPY': 'SPY',          # S&P 500
+            'QQQ': 'QQQ',          # Nasdaq 100
+            'DIA': 'DIA',          # Dow Jones Industrial Average
+            'IWM': 'IWM',          # Russell 2000 (Small Cap)
+            'VTI': 'VTI',          # Total US Stock Market
+            'VOO': 'VOO',          # S&P 500 (Vanguard)
+            'IVV': 'IVV',          # S&P 500 (iShares)
+            'VEA': 'VEA',          # Developed Markets ex-US
+            'VWO': 'VWO',          # Emerging Markets
+            'EFA': 'EFA',          # EAFE International
+        }
+
+        # ========================================================================
+        # INDIVIDUAL STOCKS (Mega Cap) - 10 assets
+        # ========================================================================
+        mega_cap_stocks = {
+            'AAPL': 'AAPL',        # Apple
+            'MSFT': 'MSFT',        # Microsoft
+            'GOOGL': 'GOOGL',      # Alphabet (Google)
+            'AMZN': 'AMZN',        # Amazon
+            'NVDA': 'NVDA',        # NVIDIA
+            'META': 'META',        # Meta (Facebook)
+            'TSLA': 'TSLA',        # Tesla
+            'BRK-B': 'BRK-B',      # Berkshire Hathaway
+            'JPM': 'JPM',          # JPMorgan Chase
+            'V': 'V',              # Visa
+        }
+
+        # ========================================================================
+        # COMMODITIES (Futures) - 8 assets
+        # ========================================================================
+        commodities = {
+            'GOLD': 'GC=F',        # Gold Futures
+            'SILVER': 'SI=F',      # Silver Futures
+            'CRUDE': 'CL=F',       # Crude Oil WTI
+            'BRENT': 'BZ=F',       # Brent Crude Oil
+            'NATGAS': 'NG=F',      # Natural Gas
+            'COPPER': 'HG=F',      # Copper
+            'CORN': 'ZC=F',        # Corn
+            'WHEAT': 'ZW=F',       # Wheat
+        }
+
+        # ========================================================================
+        # FIXED INCOME (Treasury Futures) - 3 assets
+        # ========================================================================
+        fixed_income = {
+            'TNOTE': 'ZN=F',       # 10-Year Treasury Note
+            'TBOND': 'ZB=F',       # 30-Year Treasury Bond
+            'TFIVE': 'ZF=F',       # 5-Year Treasury Note
+        }
+
+        # ========================================================================
+        # COMBINE ALL ASSETS
+        # ========================================================================
+        self.assets = {
+            **major_fx,
+            **cross_fx,
+            **em_fx,
+            **crypto,
+            **us_indices,
+            **mega_cap_stocks,
+            **commodities,
+            **fixed_income,
+        }
+
+        # Store category information for easy filtering
+        self.categories = {
+            'major_fx': list(major_fx.keys()),
+            'cross_fx': list(cross_fx.keys()),
+            'em_fx': list(em_fx.keys()),
+            'crypto': list(crypto.keys()),
+            'us_indices': list(us_indices.keys()),
+            'mega_cap_stocks': list(mega_cap_stocks.keys()),
+            'commodities': list(commodities.keys()),
+            'fixed_income': list(fixed_income.keys()),
+        }
+
+        logger.info(f"Initialized MarketProcessor with {len(self.assets)} assets across {len(self.categories)} categories")
         
     def fetch_market_data(self, start_date: str, end_date: str) -> Dict[str, pd.DataFrame]:
         """
