@@ -6,7 +6,7 @@
 
 **Macro Sentiment Trading Pipeline** is a systematic quantitative trading framework that processes global news sentiment and market data through sequential phases to generate algorithmic trading signals across 59 financial instruments. The system operates through the following phase-by-phase methodology:
 
-**Phase 1: Data Ingestion** - The system ingests news headlines from the GDELT (Global Database of Events, Language, and Tone) database via Google BigQuery, capturing global news events. **Note:** The GDELT API free tier is deprecated and non-functional; the system currently relies on cached BigQuery data. Simultaneously, market data is collected from Yahoo Finance for 59 financial instruments including major currency pairs, cryptocurrencies, equity indices, individual equities, commodities, and fixed income instruments.
+**Phase 1: Data Ingestion** - The system ingests news headlines from the GDELT (Global Database of Events, Language, and Tone) database via Google BigQuery, capturing global news events. **CRITICAL:** The GDELT API free tier is deprecated and completely non-functional; the system relies exclusively on Google BigQuery for GDELT data access. Simultaneously, market data is collected from Yahoo Finance for 59 financial instruments including major currency pairs, cryptocurrencies, equity indices, individual equities, commodities, and fixed income instruments.
 
 **Phase 2: Sentiment Analysis** - Each news headline undergoes tokenization and processing through the pre-trained FinBERT transformer model to generate sentiment scores ranging from -1 (negative) to +1 (positive). The process begins with text preprocessing: headlines are cleaned, normalized, and tokenized using the WordPiece tokenizer with a vocabulary size of 30,522 tokens. Each headline is converted to input IDs, attention masks, and token type IDs, then fed through the transformer's 12 attention layers (12 heads, 768 hidden dimensions, 3,072 intermediate dimensions). The model outputs contextualized embeddings that are passed through a classification head to generate sentiment scores. The sentiment analysis pipeline processes headlines in batches of 32, applying the FinBERT model to extract contextual sentiment information from financial news text with 95%+ accuracy on financial sentiment classification tasks.
 
@@ -28,11 +28,11 @@
 - Major geopolitical events and their sentiment impact
 - Different volatility environments and their effect on sentiment-momentum relationships
 
-**GDELT API Migration** - **CRITICAL:** The GDELT API free tier is deprecated and no longer functional. The system currently relies on cached BigQuery data, but for production use, we need to:
-- Implement alternative news data sources (NewsAPI, Alpha Vantage News, Reuters API)
-- Set up GDELT BigQuery paid access for real-time data
-- Develop fallback mechanisms for when primary data sources are unavailable
-- Ensure data continuity and quality across different news providers
+**GDELT API Migration** - **CRITICAL:** The GDELT API free tier is deprecated and completely non-functional. The system currently relies on cached BigQuery data, but for production use, we need to:
+- **Primary Solution:** Set up GDELT BigQuery paid access for real-time data (Google BigQuery works perfectly)
+- **Alternative Sources:** Implement backup news data sources (NewsAPI, Alpha Vantage News, Reuters API)
+- **Fallback Mechanisms:** Develop redundancy for when primary data sources are unavailable
+- **Data Continuity:** Ensure seamless operation across different news providers
 
 **Advanced Analytics & Visualizations** - Develop comprehensive analytical dashboards including:
 - Interactive performance analytics with Plotly/Dash
@@ -452,8 +452,8 @@ python cli/main.py get-signals --assets EURUSD  # Quick test
 
 ### Data Sources
 - **[GDELT Project](https://www.gdeltproject.org/)** - Global Database of Events, Language, and Tone
-  - **Note: Free API tier deprecated and non-functional**
-  - System currently uses Google BigQuery access for data
+  - **CRITICAL: Free API tier deprecated and completely non-functional**
+  - **System uses Google BigQuery exclusively for GDELT data access**
   - Multi-language support with English translation
   - Historical data from 1979 to present
 - **[Yahoo Finance API](https://finance.yahoo.com/)** - Market data for 59+ financial instruments
