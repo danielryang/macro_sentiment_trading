@@ -1,90 +1,105 @@
-# Python virtual environment
-venv/
-.venv/
-env/
-ENV/
-
-# maturin and Rust build artifacts
-rust_trade_sim/target/
-*.so
-*.pyd
-*.dll
-*.dylib
-
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyi.bak
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Wheels and build outputs
-dist/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
-*.whl
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Rust package lock file
-Cargo.lock 
-
-# Credentials and environment files
-macro-sentiment-trading-*.json
-*.json.key
-*credentials*.json
+# Virtual environments
 .env
-.env.*
-!.env.example
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# BigQuery credentials
-macro-sentiment-trading-02d62df7e52d.json
-
-# Data directories (large files)
-data/
-logs/
-signals/
-forecasts/
-
-# Results directory (except models which use Git LFS)
-results/**/*.csv
-results/**/*.parquet
-results/**/*.pkl
-!results/models/*.pkl
-
-# Notebook outputs
-notebooks/data/
-notebooks/results/
-notebooks/**/*.csv
-notebooks/**/*.pkl
-notebooks/**/*.parquet
-notebooks/**/*.json
-
-# Cache files
-*.parquet
-*.pkl.bak
-cache/
-.cache/
-
-# IDE and editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Generated data files
+data/
+results/
+*.parquet
+*.csv
+*.json
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+
+# Model files
+models/
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/
+*.cache
+
+# OS
 .DS_Store
-
-# OS files
 Thumbs.db
-desktop.ini
-
-# Test outputs (keep test_visualizations for demo)
-test_results/
-.coverage
-htmlcov/
 
 # Temporary files
 *.tmp
-*.bak
-*.log
-!logs/.gitkeep
+*.temp
+temp/
+tmp/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Documentation (keep only README.md)
+*.md
+!README.md
+
+# Specific generated files
+aligned_data_*.parquet
+backtest_results_*.csv
+feature_importance_*.csv
+shap_values_*.csv
+shap_importance_*.png
+metrics_*.csv
+events_data*.parquet
+daily_features*.parquet
+sentiment_data*.parquet
+comprehensive_performance_metrics.csv
+shap_features_summary.json
+trading_recommendations.json
+training_metrics.parquet
+training_results.parquet
+results.parquet
+metrics.parquet
