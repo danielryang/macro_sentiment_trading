@@ -42,3 +42,6 @@ for asset, data in [('EURUSD', eurusd), ('USDJPY', usdjpy), ('TNOTE', tnote)]:
         if col in data.columns:
             nan_count = data[col].isnull().sum()
             print(f'  {col}: {nan_count} NaN values')
+
+
+

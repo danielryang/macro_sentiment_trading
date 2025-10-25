@@ -570,5 +570,4 @@ class MarketProcessor:
             # (They will naturally have NaN at the start of the time series)
 
             aligned_data[asset_name] = merged
-
         return aligned_data

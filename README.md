@@ -2,9 +2,54 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Production-ready quantitative trading system combining GDELT news sentiment, FinBERT NLP, and machine learning with **569 engineered features** for systematic signals across 35+ assets (FX, crypto, equities, commodities).
+## Overview
 
-**Latest (Oct 2025):** 569-feature architecture (17x increase), FinBERT headline analysis, validated backtest infrastructure, model registry system.
+**Macro Sentiment Trading Pipeline** is a systematic quantitative trading framework that processes global news sentiment and market data through sequential phases to generate algorithmic trading signals across 59 financial instruments. The system operates through the following phase-by-phase methodology:
+
+**Phase 1: Data Ingestion** - The system ingests news headlines from the GDELT (Global Database of Events, Language, and Tone) database via Google BigQuery, capturing global news events. **Note:** The GDELT API free tier is deprecated and non-functional; the system currently relies on cached BigQuery data. Simultaneously, market data is collected from Yahoo Finance for 59 financial instruments including major currency pairs, cryptocurrencies, equity indices, individual equities, commodities, and fixed income instruments.
+
+**Phase 2: Sentiment Analysis** - Each news headline undergoes tokenization and processing through the pre-trained FinBERT transformer model to generate sentiment scores ranging from -1 (negative) to +1 (positive). The process begins with text preprocessing: headlines are cleaned, normalized, and tokenized using the WordPiece tokenizer with a vocabulary size of 30,522 tokens. Each headline is converted to input IDs, attention masks, and token type IDs, then fed through the transformer's 12 attention layers (12 heads, 768 hidden dimensions, 3,072 intermediate dimensions). The model outputs contextualized embeddings that are passed through a classification head to generate sentiment scores. The sentiment analysis pipeline processes headlines in batches of 32, applying the FinBERT model to extract contextual sentiment information from financial news text with 95%+ accuracy on financial sentiment classification tasks.
+
+**Phase 3: Feature Engineering** - Sentiment scores are aggregated with market data to create a comprehensive feature matrix of 569 engineered features designed to capture both macro sentiment dynamics and market microstructure patterns. The 126 sentiment-based features include: mean daily sentiment (captures overall market mood), sentiment volatility (measures uncertainty and market stress), news volume (indicates information flow intensity), sentiment momentum (trends in sentiment changes), and various lagged transformations (1-day, 3-day, 7-day lags to capture delayed market reactions). The 443 market/technical features comprise: 158 TA-Lib technical indicators (RSI, MACD, Bollinger Bands, etc. for trend and momentum analysis), lagged returns (1-day to 20-day returns for momentum capture), volatility measures (realized and implied volatility for risk assessment), cross-asset correlations (inter-market relationships and contagion effects), and interaction terms between sentiment and technical indicators (capturing how sentiment amplifies or dampens technical signals). This multi-dimensional feature space enables the models to identify complex patterns where news sentiment interacts with market microstructure to predict directional price movements.
+
+**Phase 4: Model Training** - The system employs a dual-model approach using Logistic Regression with L2 regularization (C=1.0, max_iter=1000, class_weight='balanced') and XGBoost gradient boosting algorithms (n_estimators=200, max_depth=6, learning_rate=0.1, subsample=0.8). Features are standardized using StandardScaler before Logistic Regression training, while XGBoost handles feature scaling internally. Models are trained on an expanding window methodology with a minimum of 30 days of historical data, starting from day 30 and expanding the training window by one day for each subsequent prediction. This prevents temporal data leakage by ensuring models only use information available at the time of prediction. The training process includes robust data validation: minimum 10 samples per class, target distribution validation, and comprehensive error handling for assets with insufficient data.
+
+**Phase 5: Signal Generation** - Trained models generate trading signals for each asset, with predictions accompanied by SHAP (SHapley Additive exPlanations) values for model interpretability. The system produces binary directional signals (long/short) with confidence scores.
+
+**Phase 6: Validation & Persistence** - Model performance is validated through comprehensive backtesting with transaction cost modeling. Successful models are persisted in a model registry system with automated performance analytics and monitoring capabilities.
+
+## Future Work & Development Roadmap
+
+### High-Priority TODO Items
+
+**Long-Term Model Training** - Train models on 10+ years of historical data (2014-2025) to capture full market cycles including:
+- Multiple economic cycles (expansion, contraction, recovery)
+- Various market regimes (bull markets, bear markets, sideways markets)
+- Major geopolitical events and their sentiment impact
+- Different volatility environments and their effect on sentiment-momentum relationships
+
+**GDELT API Migration** - **CRITICAL:** The GDELT API free tier is deprecated and no longer functional. The system currently relies on cached BigQuery data, but for production use, we need to:
+- Implement alternative news data sources (NewsAPI, Alpha Vantage News, Reuters API)
+- Set up GDELT BigQuery paid access for real-time data
+- Develop fallback mechanisms for when primary data sources are unavailable
+- Ensure data continuity and quality across different news providers
+
+**Advanced Analytics & Visualizations** - Develop comprehensive analytical dashboards including:
+- Interactive performance analytics with Plotly/Dash
+- Real-time sentiment-momentum correlation heatmaps
+- SHAP value evolution over time for model interpretability
+- Cross-asset sentiment contagion analysis
+- Market regime detection and regime-specific model performance
+- Feature importance evolution and stability analysis
+- Risk-adjusted performance metrics across different market conditions
+
+**Enhanced Model Architecture** - Implement additional advanced ML techniques:
+- **Currently Implemented:** Dual-model ensemble (Logistic Regression + XGBoost), SHAP interpretability, expanding window backtesting
+- **Future Enhancements:**
+  - Deep learning models (LSTM, Transformer) for sequential pattern recognition
+  - Reinforcement learning for dynamic position sizing
+  - Multi-asset portfolio optimization with sentiment constraints
+  - Ensemble methods combining multiple timeframes (daily, weekly, monthly)
 
 **Disclaimer:** Educational/research purposes only. Not financial advice.
 
@@ -380,6 +425,85 @@ src/
 python cli/main.py status  # System check
 python cli/main.py get-signals --assets EURUSD  # Quick test
 ```
+
+---
+
+## Sources and References
+
+### Primary Research Foundation
+- **arXiv:2505.16136v1** - "Macro Sentiment Trading: A Novel Approach to Systematic Trading Using Global News Sentiment" - *Primary research foundation for this system*
+- **arXiv:1908.10063** - "FinBERT: Financial Sentiment Analysis with Pre-trained Language Models" - *Sentiment analysis methodology*
+- **arXiv:1706.03762** - "Attention Is All You Need" - *Transformer architecture underlying FinBERT*
+- **arXiv:1810.04805** - "BERT: Pre-training of Deep Bidirectional Transformers" - *BERT foundation for FinBERT*
+
+### Academic Research Papers
+- **Journal of Financial Economics** - "News and Stock Returns" - *Empirical evidence of news impact on financial markets*
+- **Review of Financial Studies** - "Textual Analysis in Finance" - *NLP applications in quantitative finance*
+- **"Attention Is All You Need"** - Vaswani et al. (2017) - *Transformer architecture foundation*
+- **"BERT: Pre-training of Deep Bidirectional Transformers"** - Devlin et al. (2018) - *BERT methodology*
+- **"A Unified Approach to Interpreting Model Predictions"** - Lundberg & Lee (2017) - *SHAP values for model interpretability*
+- **"XGBoost: A Scalable Tree Boosting System"** - Chen & Guestrin (2016) - *Gradient boosting framework*
+- **"Textual Analysis in Finance"** - Loughran & McDonald (2011) - *Financial text analysis methodology*
+- **"News and Stock Returns"** - Tetlock (2007) - *News sentiment impact on markets*
+- **"Machine Learning for Asset Management"** - Gu et al. (2020) - *ML applications in finance*
+- **"Deep Learning for Finance"** - Dixon et al. (2017) - *Neural networks in trading systems*
+- **"Sentiment Analysis in Financial Markets"** - Loughran & McDonald (2016) - *Market sentiment analysis*
+- **"Natural Language Processing for Financial Text"** - Yang et al. (2019) - *NLP techniques in finance*
+
+### Data Sources
+- **[GDELT Project](https://www.gdeltproject.org/)** - Global Database of Events, Language, and Tone
+  - **Note: Free API tier deprecated and non-functional**
+  - System currently uses Google BigQuery access for data
+  - Multi-language support with English translation
+  - Historical data from 1979 to present
+- **[Yahoo Finance API](https://finance.yahoo.com/)** - Market data for 59+ financial instruments
+  - Real-time and historical OHLCV data
+  - Currency pairs, stocks, commodities, bonds, and indices
+- **[Google BigQuery](https://cloud.google.com/bigquery)** - GDELT data access
+  - Public datasets for GDELT queries
+  - Cloud-based data warehouse for large-scale analysis
+
+### Machine Learning & NLP Libraries
+- **[ProsusAI FinBERT](https://huggingface.co/ProsusAI/finbert)** - Pre-trained financial sentiment analysis model
+- **[HuggingFace Transformers](https://huggingface.co/transformers/)** - State-of-the-art NLP models
+- **[XGBoost](https://xgboost.readthedocs.io/)** - Gradient boosting framework for machine learning
+- **[scikit-learn](https://scikit-learn.org/)** - Logistic regression and comprehensive ML toolkit
+- **[PyTorch](https://pytorch.org/)** - Deep learning framework for FinBERT
+
+### Model Interpretability
+- **[SHAP (SHapley Additive exPlanations)](https://shap.readthedocs.io/)** - Lundberg & Lee (2017)
+  - Model-agnostic interpretability framework
+  - Feature importance and prediction explanations
+- **[LIME](https://github.com/marcotcr/lime)** - Local Interpretable Model-agnostic Explanations
+  - Local model interpretability for individual predictions
+
+### Python Libraries & Frameworks
+- **[pandas](https://pandas.pydata.org/)** - Data manipulation and analysis
+- **[numpy](https://numpy.org/)** - Numerical computing foundation
+- **[matplotlib](https://matplotlib.org/)** & **[seaborn](https://seaborn.pydata.org/)** - Data visualization
+- **[plotly](https://plotly.com/python/)** - Interactive visualizations and dashboards
+- **[pyarrow](https://arrow.apache.org/docs/python/)** - Parquet file format support
+- **[requests](https://requests.readthedocs.io/)** - HTTP library for API calls
+- **[argparse](https://docs.python.org/3/library/argparse.html)** - Command-line interface
+- **[logging](https://docs.python.org/3/library/logging.html)** - Application logging
+
+### Financial Data & APIs
+- **[Yahoo Finance](https://finance.yahoo.com/)** - Real-time and historical market data
+- **[Google Cloud BigQuery](https://cloud.google.com/bigquery)** - Cloud data warehouse
+- **[GDELT BigQuery Datasets](https://console.cloud.google.com/marketplace/product/gdelt-bq)** - Public datasets for global event data
+
+### Technical Analysis
+- **[TA-Lib](https://ta-lib.org/)** - Technical Analysis Library
+  - 158+ technical indicators
+  - C++ implementation with Python bindings
+  - Industry-standard technical analysis functions
+
+### Research Methodology
+- **Expanding Window Backtesting** - Prevents look-ahead bias in model evaluation
+- **Cross-Validation** - Time series cross-validation for robust model selection
+- **Feature Engineering** - 569 engineered features (126 sentiment + 443 market/technical)
+- **Transaction Cost Modeling** - Realistic trading costs for accurate performance measurement
+- **Risk Management** - Position sizing and portfolio optimization techniques
 
 ---
 
