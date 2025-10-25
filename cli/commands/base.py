@@ -101,3 +101,18 @@ class LoggedOperation:
                 self.logger.error(f"[FAIL] {self.operation_name} failed after {duration:.2f}s")
                 self.logger.error(f"[ERROR] {self.operation_name} - FAILED")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

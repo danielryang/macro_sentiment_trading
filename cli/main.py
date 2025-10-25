@@ -114,8 +114,8 @@ Examples:
   # Run multi-timeframe backtesting
   python -m cli.main multi-timeframe-backtest --assets EURUSD USDJPY --models xgboost
 
-  # Check pipeline status
-  python -m cli.main status
+    # Check parquet file compatibility
+    python -m cli.main check-parquet --path results/
         """
     )
     
@@ -135,8 +135,8 @@ Examples:
     run_parser = subparsers.add_parser("run-pipeline", help="Run the complete trading pipeline")
     run_parser.add_argument("--start-date", required=True, help="Start date (YYYY-MM-DD)")
     run_parser.add_argument("--end-date", required=True, help="End date (YYYY-MM-DD)")
-    run_parser.add_argument("--assets", nargs="*", default=["EURUSD", "USDJPY", "TNOTE"],
-                           help="Assets to process (default: EURUSD USDJPY TNOTE)")
+    run_parser.add_argument("--assets", nargs="*", default=None,
+                           help="Assets to process (default: all 60 assets)")
     run_parser.add_argument("--models", nargs="*", default=["logistic", "xgboost"],
                            help="Models to train (default: logistic xgboost)")
     run_parser.add_argument("--output-dir", default="results", help="Output directory (default: results)")
@@ -255,13 +255,6 @@ Examples:
                            help="Performance metric for best model selection (default: accuracy)")
     
     # Status Command
-    status_parser = subparsers.add_parser("status", help="Check pipeline status")
-    status_parser.add_argument("--data-dir", default="data", help="Data directory to check (default: data)")
-    status_parser.add_argument("--results-dir", default="results", help="Results directory to check (default: results)")
-    status_parser.add_argument("--models-dir", default="results/models", help="Models directory to check (default: results/models)")
-    status_parser.add_argument("--check-data", action="store_true", help="Check data availability")
-    status_parser.add_argument("--check-models", action="store_true", help="Check model status")
-    status_parser.add_argument("--check-results", action="store_true", help="Check results status")
     
     # Model Management Commands
     # List Models
@@ -357,7 +350,7 @@ def main() -> int:
         if args.command == "run-pipeline":
             from cli.commands.run_pipeline import RunPipelineCommand
             # Validate date range for training
-            start_date, end_date = validate_date_range_for_training(args.start_date, args.end_date, args.skip_training)
+            start_date, end_date = validate_date_range_for_training(args.start_date, args.end_date, skip_training=False)
             command = RunPipelineCommand(config, args)
 
         elif args.command == "collect-news":
@@ -398,9 +391,6 @@ def main() -> int:
             from cli.commands.multi_timeframe_backtest import MultiTimeframeBacktestCommand
             command = MultiTimeframeBacktestCommand(config, args)
 
-        elif args.command == "status":
-            from cli.commands.status import StatusCommand
-            command = StatusCommand(config, args)
 
         elif args.command == "list-models":
             from cli.commands.model_management import ListModelsCommand

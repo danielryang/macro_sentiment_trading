@@ -38,10 +38,10 @@ def read_parquet_robust(file_path: str, **kwargs) -> pd.DataFrame:
         try:
             logger.info(f"Trying {strategy_name} for {file_path}")
             df = strategy_func(file_path, **kwargs)
-            logger.info(f"✅ Successfully read with {strategy_name}")
+            logger.info(f"SUCCESS: Read with {strategy_name}")
             return df
         except Exception as e:
-            logger.warning(f"❌ {strategy_name} failed: {e}")
+            logger.warning(f"FAILED: {strategy_name} failed: {e}")
             last_error = e
             continue
     
@@ -128,7 +128,7 @@ def save_parquet_robust(df: pd.DataFrame, file_path: str, **kwargs) -> None:
     
     # Save with pyarrow engine for best compatibility
     df_clean.to_parquet(file_path, engine='pyarrow', index=False, **kwargs)
-    logger.info(f"✅ Saved parquet file: {file_path}")
+    logger.info(f"SUCCESS: Saved parquet file: {file_path}")
 
 def test_parquet_compatibility(file_path: str) -> bool:
     """
@@ -142,10 +142,10 @@ def test_parquet_compatibility(file_path: str) -> bool:
     """
     try:
         df = read_parquet_robust(file_path)
-        logger.info(f"✅ Parquet file is compatible: {file_path}")
+        logger.info(f"SUCCESS: Parquet file is compatible: {file_path}")
         return True
     except Exception as e:
-        logger.error(f"❌ Parquet file is incompatible: {file_path} - {e}")
+        logger.error(f"ERROR: Parquet file is incompatible: {file_path} - {e}")
         return False
 
 

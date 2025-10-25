@@ -19,10 +19,10 @@ class ProcessMarketCommand(BaseCommand):
         try:
             start_date = datetime.strptime(self.args.start_date, "%Y-%m-%d")
             end_date = datetime.strptime(self.args.end_date, "%Y-%m-%d")
-            
-            if start_date >= end_date:
-                raise ValueError("Start date must be before end date")
-            
+
+            if start_date > end_date:
+                raise ValueError("Start date must be before or equal to end date")
+
             if end_date > datetime.now():
                 raise ValueError("End date cannot be in the future")
                 
@@ -64,7 +64,7 @@ class ProcessMarketCommand(BaseCommand):
                 daily_features_path = Path(self.args.output_dir) / f"daily_features_{start_date_str}_{end_date_str}.parquet"
                 if not daily_features_path.exists():
                     # Fallback to generic filename
-                    daily_features_path = self.get_output_path("daily_features", ".parquet")
+                    daily_features_path = Path(self.get_output_path("daily_features", ".parquet"))
 
                 if daily_features_path.exists():
                     daily_features = pd.read_parquet(daily_features_path)

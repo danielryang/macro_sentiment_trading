@@ -78,6 +78,17 @@ class ModelTrainer:
         Returns:
             X, y, feature_cols, scaler
         """
+        # CRITICAL: Validate input data
+        if data is None or len(data) == 0:
+            raise ValueError("Input data is empty or None. Cannot train models without data.")
+        
+        if 'target' not in data.columns:
+            raise ValueError("Target column 'target' not found in data. Cannot train models without target variable.")
+        
+        # Check for minimum required samples
+        if len(data) < 10:
+            raise ValueError(f"Insufficient data for training: {len(data)} samples. Minimum 10 samples required.")
+        
         # Exclude only metadata columns - USE ALL OTHER FEATURES (577+)
         exclude_keywords = ['date', 'Date', 'returns', 'target', 'index', 'target_return']
 
@@ -94,6 +105,10 @@ class ModelTrainer:
             # Otherwise, it's a feature - include it!
             feature_cols.append(col)
 
+        # CRITICAL: Check if we have any features
+        if len(feature_cols) == 0:
+            raise ValueError("No feature columns found. Cannot train models without features.")
+
         X = data[feature_cols].copy()
 
         # Handle NaN values by forward fill, then backward fill, then fill with 0
@@ -108,6 +123,13 @@ class ModelTrainer:
         # Convert to numpy array
         X = X.values
         y = data['target'].values
+
+        # CRITICAL: Final validation before scaling
+        if X.shape[0] == 0:
+            raise ValueError("Feature matrix is empty after preprocessing. Cannot train models.")
+        
+        if X.shape[1] == 0:
+            raise ValueError("No features available after preprocessing. Cannot train models.")
 
         # Handle scaling based on scaler and fit_scaler parameters
         if scaler is None:
@@ -132,17 +154,44 @@ class ModelTrainer:
         Train both logistic regression and XGBoost models using only training data for scaling.
         Returns dict of trained models, scalers, and feature columns.
         """
-        X, y, feature_cols, scaler = self.prepare_features(data, fit_scaler=True)
-        trained_models = {}
-        trained_scalers = {}
-        for name, model in self.models.items():
-            if name == 'logistic':
-                model.fit(X, y)
-                trained_scalers[name] = scaler
-            else:
-                model.fit(X, y)
-            trained_models[name] = model
-        return trained_models, trained_scalers, feature_cols
+        try:
+            X, y, feature_cols, scaler = self.prepare_features(data, fit_scaler=True)
+            
+            # Additional validation for target distribution
+            unique_targets = np.unique(y)
+            if len(unique_targets) < 2:
+                raise ValueError(f"Insufficient target classes: {unique_targets}. Need at least 2 classes for classification.")
+            
+            # Check minimum samples per class
+            target_counts = np.bincount(y.astype(int))
+            min_class_samples = np.min(target_counts[target_counts > 0])
+            if min_class_samples < 5:
+                raise ValueError(f"Insufficient samples per class: {min_class_samples}. Need at least 5 samples per class.")
+            
+            logger.info(f"Training models with {X.shape[0]} samples, {X.shape[1]} features")
+            logger.info(f"Target distribution: {dict(zip(*np.unique(y, return_counts=True)))}")
+            
+            trained_models = {}
+            trained_scalers = {}
+            
+            for name, model in self.models.items():
+                try:
+                    if name == 'logistic':
+                        model.fit(X, y)
+                        trained_scalers[name] = scaler
+                    else:
+                        model.fit(X, y)
+                    trained_models[name] = model
+                    logger.info(f"Successfully trained {name} model")
+                except Exception as e:
+                    logger.error(f"Failed to train {name} model: {str(e)}")
+                    raise ValueError(f"Model training failed for {name}: {str(e)}")
+            
+            return trained_models, trained_scalers, feature_cols
+            
+        except Exception as e:
+            logger.error(f"Model training failed: {str(e)}")
+            raise ValueError(f"Model training failed: {str(e)}")
         
     def generate_signals(self, model: object, data: pd.DataFrame, scaler=None, feature_cols=None) -> pd.Series:
         """

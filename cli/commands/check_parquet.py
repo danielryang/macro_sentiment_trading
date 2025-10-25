@@ -60,19 +60,19 @@ class CheckParquetCommand(BaseCommand):
         
         # Test compatibility
         if test_parquet_compatibility(file_path):
-            self.logger.info("✅ File is compatible")
+            self.logger.info("SUCCESS: File is compatible")
             
             # Show basic info
             try:
                 df = read_parquet_robust(file_path)
-                self.logger.info(f"📊 Shape: {df.shape}")
-                self.logger.info(f"📋 Columns: {list(df.columns)}")
+                self.logger.info(f"Shape: {df.shape}")
+                self.logger.info(f"Columns: {list(df.columns)}")
                 return 0
             except Exception as e:
-                self.logger.error(f"❌ Error reading file: {e}")
+                self.logger.error(f"ERROR: Failed to read file: {e}")
                 return 1
         else:
-            self.logger.error("❌ File is incompatible")
+            self.logger.error("ERROR: File is incompatible")
             return 1
     
     def _check_directory(self, directory: str) -> int:
@@ -95,25 +95,25 @@ class CheckParquetCommand(BaseCommand):
         for file_path in parquet_files:
             if test_parquet_compatibility(str(file_path)):
                 compatible_count += 1
-                self.logger.info(f"✅ {file_path.name}")
+                self.logger.info(f"SUCCESS: {file_path.name}")
             else:
                 incompatible_files.append(str(file_path))
-                self.logger.error(f"❌ {file_path.name}")
+                self.logger.error(f"ERROR: {file_path.name}")
         
-        self.logger.info(f"📊 Summary: {compatible_count}/{len(parquet_files)} files compatible")
+        self.logger.info(f"Summary: {compatible_count}/{len(parquet_files)} files compatible")
         
         if incompatible_files:
-            self.logger.warning(f"❌ Incompatible files: {len(incompatible_files)}")
+            self.logger.warning(f"WARNING: Incompatible files: {len(incompatible_files)}")
             if self.args.fix:
                 return self._fix_incompatible_files(incompatible_files)
             else:
-                self.logger.info("💡 Use --fix to attempt repairs")
+                self.logger.info("TIP: Use --fix to attempt repairs")
         
         return 0 if incompatible_files else 0
     
     def _fix_incompatible_files(self, incompatible_files: list) -> int:
         """Attempt to fix incompatible parquet files."""
-        self.logger.info(f"🔧 Attempting to fix {len(incompatible_files)} incompatible files")
+        self.logger.info(f"Attempting to fix {len(incompatible_files)} incompatible files")
         
         fixed_count = 0
         for file_path in incompatible_files:
@@ -131,17 +131,24 @@ class CheckParquetCommand(BaseCommand):
                 
                 # Test the fixed file
                 if test_parquet_compatibility(file_path):
-                    self.logger.info(f"✅ Fixed: {os.path.basename(file_path)}")
+                    self.logger.info(f"SUCCESS: Fixed {os.path.basename(file_path)}")
                     fixed_count += 1
                     # Remove backup
                     os.unlink(backup_path)
                 else:
                     # Restore backup
                     os.rename(backup_path, file_path)
-                    self.logger.error(f"❌ Could not fix: {os.path.basename(file_path)}")
+                    self.logger.error(f"ERROR: Could not fix {os.path.basename(file_path)}")
                     
             except Exception as e:
-                self.logger.error(f"❌ Error fixing {os.path.basename(file_path)}: {e}")
+                self.logger.error(f"ERROR: Failed to fix {os.path.basename(file_path)}: {e}")
         
-        self.logger.info(f"🔧 Fixed {fixed_count}/{len(incompatible_files)} files")
+        self.logger.info(f"Fixed {fixed_count}/{len(incompatible_files)} files")
         return 0
+
+
+
+
+
+
+

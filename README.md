@@ -234,17 +234,25 @@ MODELS_DIR=results/models
 
 ---
 
-## Supported Assets (35+)
+## Supported Assets (59 Total)
 
-**FX (10):** EURUSD, USDJPY, GBPUSD, AUDUSD, USDCHF, USDCAD, NZDUSD, EURGBP, EURJPY, GBPJPY
-**Crypto (6):** BTCUSD, ETHUSD, ADAUSD, DOGEUSD, SOLUSD, AVAXUSD
-**Equities (3):** SPY (S&P 500), QQQ (Nasdaq), IWM (Russell 2000)
-**Commodities (2):** GOLD, TNOTE (Treasury futures)
+**Major FX (7):** EURUSD, USDJPY, GBPUSD, AUDUSD, USDCHF, USDCAD, NZDUSD
+**Cross FX (6):** EURGBP, EURJPY, GBPJPY, EURCHF, AUDJPY, EURAUD
+**Emerging Market FX (6):** USDMXN, USDBRL, USDZAR, USDTRY, USDINR, USDCNY
+**Cryptocurrencies (9):** BTCUSD, ETHUSD, BNBUSD, XRPUSD, ADAUSD, SOLUSD, DOTUSD, DOGEUSD, LINKUSD
+**US Equity Indices (10):** SPY, QQQ, DIA, IWM, VTI, VOO, IVV, VEA, VWO, EFA
+**Individual Stocks (10):** AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, BRK-B, JPM, V
+**Commodities (8):** GOLD, SILVER, CRUDE, BRENT, NATGAS, COPPER, CORN, WHEAT
+**Fixed Income (3):** TNOTE, TBOND, TFIVE
+
+**Note:** MATICUSD was removed due to data unavailability (delisted/unavailable on Yahoo Finance).
 
 Add custom assets in `src/market_processor.py`:
 ```python
-ASSET_MAPPINGS = {
-    'CUSTOM': 'TICKER-SYMBOL'  # Yahoo Finance format
+# Add to appropriate category dictionary
+crypto = {
+    'NEWCRYPTO': 'NEWCRYPTO-USD',  # Add your asset here
+    # ... existing assets
 }
 ```
 

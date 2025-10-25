@@ -496,4 +496,3 @@ class MultiTimeframeBacktestCommand(BaseCommand):
             json.dump(recommendations, f, indent=2)
         
         print(f"\n[SAVED] Recommendations saved to: {rec_file}")
-        print("=" * 80)

@@ -84,7 +84,7 @@ class MarketProcessor:
         }
 
         # ========================================================================
-        # CRYPTOCURRENCIES - 10 assets
+        # CRYPTOCURRENCIES - 9 assets (MATICUSD removed - no data available)
         # ========================================================================
         crypto = {
             'BTCUSD': 'BTC-USD',   # Bitcoin
@@ -95,7 +95,6 @@ class MarketProcessor:
             'SOLUSD': 'SOL-USD',   # Solana
             'DOTUSD': 'DOT-USD',   # Polkadot
             'DOGEUSD': 'DOGE-USD', # Dogecoin
-            'MATICUSD': 'MATIC-USD', # Polygon
             'LINKUSD': 'LINK-USD', # Chainlink
         }
 
@@ -186,21 +185,58 @@ class MarketProcessor:
         """
         Fetch market data for specified assets, strictly following research math.
         Returns DataFrames with log returns, next-day target, and 20-day volatility.
+        Automatically filters out assets with insufficient data.
         """
         market_data = {}
+        failed_assets = []
+        
         for asset_name, ticker in self.assets.items():
             try:
+                logger.info(f"Downloading data for {asset_name} ({ticker})...")
                 data = yf.download(ticker, start=start_date, end=end_date)
+                
+                # CRITICAL: Check if we got any data
+                if data is None or len(data) == 0:
+                    logger.warning(f"No data available for {asset_name} ({ticker}) - skipping")
+                    failed_assets.append(asset_name)
+                    continue
+                
+                # Check for minimum data requirements (at least 30 days)
+                if len(data) < 30:
+                    logger.warning(f"Insufficient data for {asset_name}: {len(data)} days (need 30+) - skipping")
+                    failed_assets.append(asset_name)
+                    continue
+                
                 # Log returns
                 data['returns'] = np.log(data['Close'] / data['Close'].shift(1))
                 # Next-day target: 1 if next day's return > 0, else 0
                 data['target'] = (data['Close'].shift(-1) > data['Close']).astype(int)
                 # 20-day rolling volatility (std of log returns)
                 data['vol20'] = data['returns'].rolling(20).std()
+                
+                # Final validation: check if we have valid data after processing
+                valid_data = data.dropna()
+                if len(valid_data) < 10:
+                    logger.warning(f"Insufficient valid data for {asset_name}: {len(valid_data)} samples (need 10+) - skipping")
+                    failed_assets.append(asset_name)
+                    continue
+                
                 market_data[asset_name] = data
-                logger.info(f"Successfully downloaded and processed data for {asset_name}")
+                logger.info(f"SUCCESS: Downloaded and processed data for {asset_name} ({len(data)} days)")
+                
             except Exception as e:
-                logger.error(f"Error downloading data for {asset_name}: {str(e)}")
+                logger.error(f"ERROR: Failed to download data for {asset_name}: {str(e)}")
+                failed_assets.append(asset_name)
+        
+        # Log summary
+        logger.info(f"Market data collection completed:")
+        logger.info(f"  SUCCESS: {len(market_data)} assets")
+        logger.info(f"  FAILED: {len(failed_assets)} assets")
+        
+        if failed_assets:
+            logger.info(f"  Failed assets: {', '.join(failed_assets)}")
+            logger.info("  Note: Failed assets may be delisted, have insufficient data, or be temporarily unavailable")
+        
         return market_data
         
     def compute_market_features(self, data: pd.DataFrame) -> pd.DataFrame:

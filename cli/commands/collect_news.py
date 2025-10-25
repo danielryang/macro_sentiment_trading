@@ -17,10 +17,10 @@ class CollectNewsCommand(BaseCommand):
         try:
             start_date = datetime.strptime(self.args.start_date, "%Y-%m-%d")
             end_date = datetime.strptime(self.args.end_date, "%Y-%m-%d")
-            
-            if start_date >= end_date:
-                raise ValueError("Start date must be before end date")
-            
+
+            if start_date > end_date:
+                raise ValueError("Start date must be before or equal to end date")
+
             if end_date > datetime.now():
                 raise ValueError("End date cannot be in the future")
                 
@@ -61,5 +61,4 @@ class CollectNewsCommand(BaseCommand):
         except Exception as e:
             self.logger.error(f"News collection failed: {e}", exc_info=True)
             return 1
-
 

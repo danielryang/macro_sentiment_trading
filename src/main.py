@@ -40,14 +40,14 @@ try:
     from src.sentiment_analyzer import SentimentAnalyzer
     from src.market_processor import MarketProcessor
     from src.model_trainer import ModelTrainer
-    from src.config_validator import ConfigValidator
+    from src.config import Config
 except ImportError:
     from .news_collector import GDELTCollector
     from .headline_processor import HeadlineProcessor
     from .sentiment_analyzer import SentimentAnalyzer
     from .market_processor import MarketProcessor
     from .model_trainer import ModelTrainer
-    from .config_validator import ConfigValidator
+    from .config import Config
 
 # Configure logging with both console and file handlers
 def setup_logging(log_level: str = "INFO", log_file: str = "pipeline.log"):
@@ -81,12 +81,12 @@ def run_pipeline(start_date: str, end_date: str, should_collect_news: bool, shou
     # Validate configuration if requested
     if validate_config:
         logger.info("Validating configuration...")
-        validator = ConfigValidator()
-        is_valid = validator.validate_environment()
+        validator = Config()
+        validation_result = validator.validate_configuration()
         
-        if not is_valid:
+        if not validation_result.get('valid', True):
             logger.error("Configuration validation failed. Please fix the errors and try again.")
-            validator.print_validation_report()
+            logger.error(f"Validation issues: {validation_result}")
             return None
         
         # Validate date range
@@ -117,21 +117,30 @@ def run_pipeline(start_date: str, end_date: str, should_collect_news: bool, shou
     market_processor = MarketProcessor()
     model_trainer = ModelTrainer()
     
-    # Step 1: Collect and process news
-    gdelt_data_path = f'data/news/gdelt_{start_date}_{end_date}.parquet'
-    
+    # Step 1: Collect and process news (using the same method as notebook)
     if should_collect_news:
         logger.info("Collecting news data...")
-        events_df = news_collector.fetch_events(start_date, end_date)
+        from src.data_collector import collect_and_process_news
+        
+        # Use the same caching-enabled helper function as the notebook
+        events_df = collect_and_process_news(
+            start_date=start_date,
+            end_date=end_date,
+            force_refresh=False,  # Use cache if available
+            use_method=None,      # Auto-detect (BigQuery preferred)
+            top_n_per_day=100
+        )
+        logger.info(f"Collected {len(events_df)} news events")
     else:
         logger.info("Skipping news collection - using existing data")
-        events_df = pd.read_parquet(gdelt_data_path)
-    
-    if should_process_headlines:
-        logger.info("Processing headlines...")
-        events_df = headline_processor.process_articles(events_df)
-    else:
-        logger.info("Skipping headline processing - headlines already in data")
+        # Try to load from cache first
+        cache_file = f"data/cache/events_data_{start_date}_{end_date}.parquet"
+        if os.path.exists(cache_file):
+            events_df = pd.read_parquet(cache_file)
+            logger.info(f"Loaded {len(events_df)} events from cache")
+        else:
+            logger.error("No cached data found and news collection is disabled")
+            return None
     
     # Step 2: Compute sentiment scores
     logger.info("Computing sentiment scores...")
@@ -156,33 +165,156 @@ def run_pipeline(start_date: str, end_date: str, should_collect_news: bool, shou
     logger.info("Aligning features...")
     aligned_data = market_processor.align_features(market_data, daily_features)
     
-    # Step 6: Train models and backtest with SHAP analysis
-    logger.info("Training models and running backtest...")
+    # Step 6: Train models first (same as notebook)
+    logger.info("Training models...")
+    trained_models = {}
+    
+    for asset_name, data in aligned_data.items():
+        logger.info(f"Training models for {asset_name}...")
+        logger.info(f"  Data shape: {data.shape}")
+        
+        # Check minimum data requirements
+        if len(data) < 30:
+            logger.error(f"SKIPPING {asset_name}: Insufficient data ({len(data)} samples, need 30+)")
+            continue
+        
+        if 'target' not in data.columns:
+            logger.error(f"SKIPPING {asset_name}: No target column found")
+            continue
+        
+        # Check target distribution
+        target_counts = data['target'].value_counts()
+        min_class_samples = target_counts.min()
+        if min_class_samples < 5:
+            logger.error(f"SKIPPING {asset_name}: Insufficient samples per class ({min_class_samples}, need 5+)")
+            continue
+        
+        try:
+            # Train both models (same as notebook)
+            models, scalers, feature_cols = model_trainer.train_models(data)
+            
+            trained_models[asset_name] = {
+                'models': models,
+                'scalers': scalers,
+                'feature_cols': feature_cols
+            }
+            
+            logger.info(f"SUCCESS: Trained {len(models)} models for {asset_name}")
+            
+        except Exception as e:
+            logger.error(f"ERROR: Failed to train models for {asset_name}: {str(e)}")
+            continue
+    
+    # Step 7: Run backtest (same as notebook)
+    logger.info("Running backtests...")
     results = {}
     metrics = {}
     all_shap_values = {}
     
+    successful_assets = []
+    failed_assets = []
+    
     for asset_name, data in aligned_data.items():
         logger.info(f"Processing {asset_name}...")
         
-        # Set realistic transaction costs based on typical spreads
-        # EURUSD/USDJPY: ~0.5-1.0 pips = 0.00005-0.0001, using 0.0001 (0.01%) for conservative estimate
-        # Treasury futures: ~0.5-1.0 ticks = 0.0001-0.0002, using 0.0002 (0.02%) for conservative estimate
-        transaction_cost = 0.0001 if asset_name in ['EURUSD', 'USDJPY'] else 0.0002
+        # CRITICAL: Validate data before processing
+        if data is None or len(data) == 0:
+            logger.error(f"SKIPPING {asset_name}: No data available")
+            failed_assets.append(asset_name)
+            continue
         
-        # Run backtest with automatic SHAP analysis and result saving
-        asset_results, asset_metrics, asset_shap = model_trainer.backtest(
-            data, 
-            transaction_cost, 
-            asset_name=asset_name, 
-            save_results=True
-        )
+        if 'target' not in data.columns:
+            logger.error(f"SKIPPING {asset_name}: No target column found")
+            failed_assets.append(asset_name)
+            continue
         
-        results[asset_name] = asset_results
-        metrics[asset_name] = asset_metrics
-        all_shap_values[asset_name] = asset_shap
+        # Check minimum data requirements
+        if len(data) < 30:
+            logger.error(f"SKIPPING {asset_name}: Insufficient data ({len(data)} samples, need 30+)")
+            failed_assets.append(asset_name)
+            continue
         
-        logger.info(f"COMPLETED {asset_name}: {len(asset_results)} models, {len(asset_shap)} SHAP analyses")
+        # Check target distribution
+        target_counts = data['target'].value_counts()
+        min_class_samples = target_counts.min()
+        if min_class_samples < 5:
+            logger.error(f"SKIPPING {asset_name}: Insufficient samples per class ({min_class_samples}, need 5+)")
+            failed_assets.append(asset_name)
+            continue
+        
+        logger.info(f"  Data shape: {data.shape}")
+        logger.info(f"  Target distribution: {dict(target_counts)}")
+        
+        try:
+            # Set realistic transaction costs based on typical spreads
+            # EURUSD/USDJPY: ~0.5-1.0 pips = 0.00005-0.0001, using 0.0001 (0.01%) for conservative estimate
+            # Treasury futures: ~0.5-1.0 ticks = 0.0001-0.0002, using 0.0002 (0.02%) for conservative estimate
+            transaction_cost = 0.0001 if asset_name in ['EURUSD', 'USDJPY'] else 0.0002
+            
+            # Use the same approach as the notebook - manual backtesting
+            from src.performance_metrics import PerformanceAnalyzer
+            perf_analyzer = PerformanceAnalyzer()
+            
+            # Get trained models for this asset (same as notebook)
+            if asset_name not in trained_models:
+                logger.error(f"No trained models found for {asset_name}")
+                continue
+                
+            models = trained_models[asset_name]['models']
+            scalers = trained_models[asset_name]['scalers']
+            feature_cols = trained_models[asset_name]['feature_cols']
+            
+            asset_results = {}
+            asset_metrics = {}
+            asset_shap = {}
+            
+            # Loop through each model (same as notebook)
+            for model_name, model in models.items():
+                logger.info(f"  Backtesting {model_name} for {asset_name}...")
+                
+                # Get scaler if available
+                scaler = scalers.get(model_name, None)
+                
+                # Generate signals (same as notebook)
+                signals = model_trainer.generate_signals(model, data, scaler=scaler, feature_cols=feature_cols)
+                
+                # Compute strategy returns (same as notebook)
+                strategy_returns = model_trainer.compute_returns(signals, data, transaction_cost)
+                
+                # Compute metrics (same as notebook)
+                metrics = perf_analyzer.compute_comprehensive_metrics(strategy_returns)
+                
+                # Store results (same structure as notebook)
+                asset_results[model_name] = {
+                    'signals': signals,
+                    'returns': strategy_returns,
+                    'metrics': metrics
+                }
+                asset_metrics[model_name] = metrics
+            
+            results[asset_name] = asset_results
+            metrics[asset_name] = asset_metrics
+            all_shap_values[asset_name] = asset_shap
+            
+            logger.info(f"SUCCESS: Completed {asset_name}: {len(asset_results)} models, {len(asset_shap)} SHAP analyses")
+            successful_assets.append(asset_name)
+            
+        except Exception as e:
+            logger.error(f"ERROR: Failed {asset_name}: {str(e)}")
+            failed_assets.append(asset_name)
+            continue
+    
+    # Log summary
+    logger.info(f"Pipeline completed!")
+    logger.info(f"  SUCCESS: {len(successful_assets)} assets")
+    logger.info(f"  FAILED: {len(failed_assets)} assets")
+    
+    if successful_assets:
+        logger.info(f"  Successful: {', '.join(successful_assets)}")
+    
+    if failed_assets:
+        logger.info(f"  Failed: {', '.join(failed_assets)}")
+        logger.info("  Note: Failed assets may have insufficient data, date misalignment, or other data quality issues")
     
     # Save comprehensive performance summary
     logger.info("Saving comprehensive performance summary...")
@@ -212,6 +344,7 @@ def run_pipeline(start_date: str, end_date: str, should_collect_news: bool, shou
         logger.error(f"ERROR saving summary files: {e}")
     
     logger.info("Pipeline completed successfully!")
+    return True
 
 def main():
     """Entry point for command line execution."""
