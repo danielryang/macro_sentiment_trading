@@ -569,5 +569,5 @@ class MarketProcessor:
             # Keep the dataframe even if rolling features have NaN
             # (They will naturally have NaN at the start of the time series)
 
-            aligned_data[asset_name] = merged
-        return aligned_data
+            aligned_data[asset_name] = merged        return aligned_data
+
