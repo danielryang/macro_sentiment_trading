@@ -207,4 +207,4 @@ tail -f logs/cli.log
 
 ---
 
-**License:** MIT | **Support:** [GitHub Issues](https://github.com/danielryang/macro_sentiment_trading/issues) | **Docs:** `TRADING_QUICKSTART.md`
+**License:** MIT | **Support:** [GitHub Issues](https://github.com/danielryang/macro_sentiment_trading/issues) 
